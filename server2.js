@@ -6,6 +6,7 @@ const server = http.createServer(app);
 const io = new Server(server);
 const mysql = require('mysql');
 const path = require('path');
+let lastDataSnapshot = [];
 
 // 환경 변수에서 포트 번호를 읽어오도록 설정
 const PORT = process.env.PORT || 31681;
@@ -90,6 +91,22 @@ app.get('/TS', function (req, res) {
         res.render('ts', { data: results });
     });
 });
+
+setInterval(() => {
+    connection.query('SELECT * FROM ts_work', (error, results) => {
+        if (error) {
+            console.error('데이터베이스 쿼리 오류:', error);
+            return;
+        }
+
+        // 변화 감지 로직 (간단한 예시)
+        if (JSON.stringify(results) !== JSON.stringify(lastDataSnapshot)) {
+            console.log('데이터에 변화가 감지되었습니다.');
+            io.emit('updateData', results); // 클라이언트에게 데이터 업데이트 푸시
+            lastDataSnapshot = results; // 스냅샷 업데이트
+        }
+    });
+}, 5000); // 5초마다 데이터베이스 폴링
 
 // LOCAL 페이지에 대한 요청 처리
 app.get('/local', function (req, res) {
