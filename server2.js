@@ -13,10 +13,6 @@ const path = require('path')
 // 환경 변수에서 포트 번호를 읽어오도록 설정
 const PORT = process.env.PORT || 31681;
 
-//app.listen(PORT, function() {
-//    console.log(`listening on ${PORT}`);
-//});
-
 // 데이터베이스 연결 정보를 환경 변수에서 읽어오도록 설정
 const connection = mysql.createConnection({
     host: process.env.DB_HOST || 'svc.sel5.cloudtype.app',
@@ -35,15 +31,37 @@ connection.connect(error => {
     console.log('Connected to the database.');
 });
 
-
 io.on('connection', (socket) => {
     console.log('A user connected');
-  
+
     socket.on('disconnect', () => {
       console.log('User disconnected');
     });
-  });
 
+    // 클라이언트로부터 삭제된 데이터 정보를 받아와 처리
+    socket.on('deleteData', (deletedData) => {
+        // 삭제된 데이터를 데이터베이스에서 삭제
+        connection.query('DELETE FROM ts_work WHERE id IN (?)', [deletedData], (error, results, fields) => {
+            if (error) {
+                console.error('데이터베이스 쿼리 오류:', error);
+                return;
+            }
+            console.log('삭제된 데이터를 데이터베이스에서 제거했습니다.');
+        });
+    });
+
+    // 클라이언트로부터 새로 추가된 데이터 정보를 받아와 처리
+    socket.on('addData', (newData) => {
+        // 새로 추가된 데이터를 데이터베이스에 추가
+        connection.query('INSERT INTO ts_work SET ?', newData, (error, results, fields) => {
+            if (error) {
+                console.error('데이터베이스 쿼리 오류:', error);
+                return;
+            }
+            console.log('새로운 데이터를 데이터베이스에 추가했습니다.');
+        });
+    });
+});
 
 // 클라이언트에서 데이터를 요청하는 엔드포인트 설정
 app.get('/getData', function(req, res) {
@@ -65,11 +83,9 @@ server.listen(PORT, () => {
 // 정적 파일 제공
 app.use(express.static(path.join(__dirname, 'public')));
 
-
 app.get('/', function(요청, 응답) {
     응답.sendFile(path.join(__dirname, 'index.html'));
 });
-
 
 app.set('view engine', 'ejs');
 app.set('views', path.join(__dirname, 'views'));
@@ -83,34 +99,8 @@ app.get('/TS', function(req, res) {
 
         // ts.ejs 템플릿을 렌더링하여 클라이언트에게 전송
         res.render('ts', { data: results });
-
-        
-        // 데이터를 Socket.io를 통해 클라이언트에게도 전송
-        io.emit('updateData', results);
     });
 });
-
-// 클라이언트가 연결되면 데이터를 조회하여 전송합니다.
-io.on('connection', (socket) => {
-    console.log('사용자가 연결되었습니다.');
-  
-    // 클라이언트가 연결되면 초기 데이터를 조회하여 전송합니다.
-    connection.query('SELECT * FROM ts_work', function(error, results, fields) {
-        if (error) {
-            console.error('데이터베이스 쿼리 오류:', error);
-            return;
-        }
-        // 클라이언트에게 초기 데이터를 전송합니다.
-        socket.emit('updateData', results);
-    });
-  
-    socket.on('disconnect', () => {
-        console.log('사용자가 연결 해제되었습니다.');
-    });
-});
-
-
-
 
 // LOCAL 페이지에 대한 요청 처리
 app.get('/local', function(req, res) {
