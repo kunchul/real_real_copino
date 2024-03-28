@@ -28,18 +28,6 @@ connection.connect(error => {
     console.log('Connected to the database.');
 });
 
-// 클라이언트에서 데이터베이스의 변경 사항을 감지하여 클라이언트에게 전송
-const sendUpdateData = () => {
-    connection.query('SELECT * FROM ts_work', (error, results, fields) => {
-        if (error) {
-            console.error('데이터베이스 쿼리 오류:', error);
-            return;
-        }
-        // 변경된 데이터를 클라이언트에게 전송
-        io.emit('updateData', results);
-    });
-};
-
 io.on('connection', (socket) => {
     console.log('A user connected');
 
@@ -56,8 +44,8 @@ io.on('connection', (socket) => {
                 return;
             }
             console.log('삭제된 데이터를 데이터베이스에서 제거했습니다.');
-            // 변경된 데이터를 클라이언트에게 다시 전송
-            sendUpdateData();
+            // 삭제된 데이터의 ID를 클라이언트에게 전송하여 삭제 요청
+            io.emit('deleteData', deletedData);
         });
     });
 
@@ -70,8 +58,8 @@ io.on('connection', (socket) => {
                 return;
             }
             console.log('새로운 데이터를 데이터베이스에 추가했습니다.');
-            // 변경된 데이터를 클라이언트에게 다시 전송
-            sendUpdateData();
+            // 추가된 데이터를 클라이언트에게 전송하여 추가 요청
+            io.emit('addData', newData);
         });
     });
 });
@@ -107,6 +95,3 @@ app.get('/TS', function (req, res) {
 app.get('/local', function (req, res) {
     res.sendFile(path.join(__dirname, 'local.html'));
 });
-
-// 데이터베이스 변경 사항 주기적으로 확인하여 클라이언트에게 전송
-setInterval(sendUpdateData, 5000); // 5초마다 데이터베이스 확인하여 변경된 데이터 전송
