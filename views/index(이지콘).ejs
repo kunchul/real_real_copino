@@ -29,7 +29,7 @@
             <% } %>
             <% if (['manage', 'employee', 'driver', 'company_delivery', 'delivery'].includes(user.role)) { %>
                 <a href="ezicon" class="fs-s1 mx-10 py-3 indigo no-underline hover-underline" style="font-size: 25px !important;">이지콘 - 북항 보관소</a>
-                <a href="dudon" class="fs-s1 mx-10 py-3 indigo no-underline hover-underline" style="font-size: 25px !important;">두동 - 두동 보관소</a>
+                <a href="dudong" class="fs-s1 mx-10 py-3 indigo no-underline hover-underline" style="font-size: 25px !important;">두동 - 두동 보관소</a>
             <% } %>
             <% if (['manage', 'employee', 'driver', 'company_delivery', 'delivery'].includes(user.role)) { %>
                 <a href="우암CY" class="fs-s1 mx-10 py-3 indigo no-underline hover-underline" style="font-size: 25px !important;">우암CY</a>
@@ -43,6 +43,7 @@
 
     <main class="auth-section">
         <div class="auth-container">
+            <h1 style="text-align: center; color: white; font-size: 24px;">이지콘 CY에 오신걸 환영합니다</h1>
             <div class="button-group">
                 <button class="btn-action btn-load" data-modal="modal-load">상차접수</button>
                 <button class="btn-action btn-unload" data-modal="modal-unload">하차접수</button>
@@ -426,8 +427,6 @@ body {
 <!-- 스크립트 추가 -->
 <script>
 
-
-
 document.addEventListener("DOMContentLoaded", function() {
     var modals = document.querySelectorAll(".modal");
     var closeButtons = document.querySelectorAll(".close");
@@ -446,6 +445,9 @@ document.addEventListener("DOMContentLoaded", function() {
             // 선택한 모달만 열기
             if (modal) {
                 modal.style.display = "block";
+                // 모달이 열릴 때마다 입력 필드를 초기화하고 새로운 조회 수행
+                document.getElementById('container-number').value = ''; // 입력 필드 초기화
+                document.getElementById('unload-result').innerText = '결과가 여기에 표시됩니다.'; // 결과 초기화
             }
         });
     });
@@ -467,21 +469,18 @@ document.addEventListener("DOMContentLoaded", function() {
     });
 });
 
-
-
-
-// 이벤트 리스너 설정
+// 컨테이너 번호 검색 버튼 클릭 시 이벤트 처리
 document.getElementById('search-button').addEventListener('click', function () {
-    // 입력된 컨테이너 번호를 읽어옴
+    // 입력된 컨테이너 번호 가져오기
     const containerNumber = document.getElementById('container-number').value.trim();
 
-    // 컨테이너 번호가 11자리가 아닐 경우 알림
+    // 컨테이너 번호가 유효한지 확인 (예: 11자리인지)
     if (containerNumber.length !== 11) {
         alert('컨테이너 번호는 11자리여야 합니다.');
         return;
     }
 
-    // 서버에 컨테이너 번호를 보내기 위한 요청
+    // 서버로 컨테이너 번호를 전송하여 하차지 조회
     fetch('/api/search-another', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
@@ -494,13 +493,17 @@ document.getElementById('search-button').addEventListener('click', function () {
         return response.json();
     })
     .then(data => {
-        // 서버 응답으로 받은 M_PORT 값을 화면에 표시
-        document.getElementById('unload-result').innerText = `하차지: ${data.m_port}`;
+        // 서버 응답으로 받은 하차지 정보를 화면에 표시
+        document.getElementById('unload-result').innerText = `${data.m_port}`;
     })
     .catch(error => {
         console.error('데이터 가져오기 실패:', error);
         document.getElementById('unload-result').innerText = '결과를 찾을 수 없습니다.';
     });
 });
+
+
+
+
 
     </script>
