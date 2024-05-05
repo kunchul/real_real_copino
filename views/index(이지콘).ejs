@@ -23,22 +23,25 @@
             </a>
         </div>
         
-        <div id="nav-items" class="hidden flex sm-w-100pc flex-column md-flex md-flex-row md-justify-end items-center">
-            <% if (['manage', 'employee', 'company_delivery'].includes(user.role)) { %>
-                <a href="배차관리" class="fs-s1 mx-10 py-3 indigo no-underline hover-underline" style="font-size: 25px !important;">배차관리</a>
-            <% } %>
-            <% if (['manage', 'employee', 'driver', 'company_delivery', 'delivery'].includes(user.role)) { %>
-                <a href="ezicon" class="fs-s1 mx-10 py-3 indigo no-underline hover-underline" style="font-size: 25px !important;">이지콘 - 북항 보관소</a>
-                <a href="dudong" class="fs-s1 mx-10 py-3 indigo no-underline hover-underline" style="font-size: 25px !important;">두동 - 두동 보관소</a>
-            <% } %>
-            <% if (['manage', 'employee', 'driver', 'company_delivery', 'delivery'].includes(user.role)) { %>
-                <a href="우암CY" class="fs-s1 mx-10 py-3 indigo no-underline hover-underline" style="font-size: 25px !important;">우암CY</a>
-            <% } %>
-            <% if (user.role === 'manage') { %>
-                <a href="관리자페이지" class="fs-s1 mx-10 py-3 indigo no-underline hover-underline" style="font-size: 25px !important;">관리자 페이지</a>
-            <% } %>
-            <a href="/" class="fs-s1 mx-10 py-3 indigo no-underline hover-underline" style="font-size: 25px !important;">로그아웃</a>
-        </div>
+    </div>
+    <div id="nav-items" class="hidden flex sm-w-100pc flex-column md-flex md-flex-row md-justify-end items-center">
+        <% if (['manage', 'employee', 'company_delivery'].includes(user.role)) { %>
+            <a href="배차관리" class="nav-link">배차관리</a>
+        <% } %>
+        <% if (['manage', 'employee', 'driver', 'company_delivery', 'delivery'].includes(user.role)) { %>
+            <a href="ezicon" class="nav-link">이지콘 - 북항 보관소</a>
+            <a href="dudong" class="nav-link">두동 - 두동 보관소</a>
+        <% } %>
+        <% if (['manage', 'employee', 'driver', 'company_delivery', 'delivery'].includes(user.role)) { %>
+            <a href="우암CY" class="nav-link">우암CY</a>
+        <% } %>
+        <% if (user.role === 'manage') { %>
+            <a href="관리자페이지" class="nav-link">관리자 페이지</a>
+        <% } %>
+        <a href="/" class="nav-link">로그아웃</a>
+    </div>
+
+</nav>
     </nav>
 
     <main class="auth-section">
@@ -325,20 +328,30 @@ body {
 
 
 
-/* 모달 배경 */
+/* 모달 컨테이너 */
 .modal {
-    display: none; /* 기본적으로 숨김 */
-    position: fixed; /* 화면 전체에 고정 */
-    z-index: 1000;
-    left: 0;
+    position: fixed;
     top: 50%;
     left: 50%;
-    transform: translate(-50%, -60%);
-    border-radius: 8px; /* 모달의 모서리를 둥글게 만듦 */
-    width: 30%;
-    height: 60%;
-    background-color: rgba(41, 40, 40, 0.95); /* 약간 투명한 어두운 회색 배경 */
+    transform: translate(-50%, -50%);
+    width: 80%;
+    max-width: 600px; /* 큰 화면에서는 최대 600px까지 */
+    background-color: white;
+    border-radius: 8px;
+    box-shadow: 0 4px 8px rgba(0, 0, 0, 0.2);
+    z-index: 1000;
+    padding: 1.5em;
+    display: none; /* 처음에는 숨김 */
 }
+
+/* 작은 화면을 위한 미디어 쿼리 */
+@media (max-width: 768px) {
+    .modal {
+        width: 90%; /* 모바일 화면에서는 더 작은 크기로 */
+        padding: 1em; /* 내 내용도 적당히 조정 */
+    }
+}
+
 
 /* 모달 창 내용 */
 .modal-content {
@@ -417,6 +430,30 @@ body {
     color: #ddd;
     font-family: 'Arial Rounded MT Bold', Verdana, sans-serif;
     font-weight: bold;
+}
+
+
+
+
+
+
+
+.nav-link {
+    font-size: 1vw; /* 뷰포트의 너비 기준으로 크기 조정 */
+    margin: 0.5em;
+    padding: 0.5em 1em;
+    color: #4B0082; /* indigo 색상 */
+    text-decoration: none;
+    transition: font-size 0.2s ease-in-out;
+}
+.nav-link:hover {
+    text-decoration: underline;
+}
+
+@media (max-width: 768px) {
+    .nav-link {
+        font-size: 2vw; /* 작은 화면에서는 더 작은 크기로 조정 */
+    }
 }
 
 
