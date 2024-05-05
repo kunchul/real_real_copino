@@ -22,22 +22,21 @@
                 <i data-feather="menu"></i>
             </a>
         </div>
-        
         <div id="nav-items" class="hidden flex sm-w-100pc flex-column md-flex md-flex-row md-justify-end items-center">
             <% if (['manage', 'employee', 'company_delivery'].includes(user.role)) { %>
-                <a href="배차관리" class="fs-s1 mx-10 py-3 indigo no-underline hover-underline" style="font-size: 25px !important;">배차관리</a>
+                <a href="배차관리" class="nav-link">배차관리</a>
             <% } %>
             <% if (['manage', 'employee', 'driver', 'company_delivery', 'delivery'].includes(user.role)) { %>
-                <a href="ezicon" class="fs-s1 mx-10 py-3 indigo no-underline hover-underline" style="font-size: 25px !important;">이지콘 - 북항 보관소</a>
-                <a href="dudong" class="fs-s1 mx-10 py-3 indigo no-underline hover-underline" style="font-size: 25px !important;">두동 - 두동 보관소</a>
+                <a href="ezicon" class="nav-link">이지콘 - 북항 보관소</a>
+                <a href="dudong" class="nav-link">두동 - 두동 보관소</a>
             <% } %>
             <% if (['manage', 'employee', 'driver', 'company_delivery', 'delivery'].includes(user.role)) { %>
-                <a href="우암CY" class="fs-s1 mx-10 py-3 indigo no-underline hover-underline" style="font-size: 25px !important;">우암CY</a>
+                <a href="우암CY" class="nav-link">우암CY</a>
             <% } %>
             <% if (user.role === 'manage') { %>
-                <a href="관리자페이지" class="fs-s1 mx-10 py-3 indigo no-underline hover-underline" style="font-size: 25px !important;">관리자 페이지</a>
+                <a href="관리자페이지" class="nav-link">관리자 페이지</a>
             <% } %>
-            <a href="/" class="fs-s1 mx-10 py-3 indigo no-underline hover-underline" style="font-size: 25px !important;">로그아웃</a>
+            <a href="/" class="nav-link">로그아웃</a>
         </div>
     </nav>
 
@@ -218,6 +217,105 @@ label {
     opacity: 1;
     visibility: visible;
 }
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+body {
+        margin: 0;
+        padding: 0;
+        font-family: Arial, sans-serif;
+        }
+.container {
+    width: 90%;
+    margin: auto;
+}
+header, footer {
+    width: 100%;
+    padding: 20px;
+    background-color: #f8f8f8;
+    text-align: center;
+}
+main {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 16px;
+    justify-content: center;
+    margin: 20px 0;
+}
+article {
+    flex: 1 1 30%;
+    background-color: #f1f1f1;
+    padding: 15px;
+    border-radius: 8px;
+    box-shadow: 0 4px 8px rgba(0,0,0,0.1);
+    transition: transform 0.3s ease-in-out;
+}
+article:hover {
+    transform: scale(1.05);
+}
+
+
+img {
+    max-width: 100%;
+    height: auto;
+    border-radius: 4px;
+}
+
+@media (max-width: 762px) {
+    article {
+        flex: 1 1 100%;
+    }
+    header, footer {
+        padding: 15px;
+    }
+}
+
+
+
+h1, h2 {
+    font-size: 2rem;  /* 큰 화면에서 큰 텍스트 크기 */
+}
+
+@media (max-width: 768px) {
+    h1, h2 {
+        font-size: 1.5rem;  /* 작은 화면에서 작은 크기 */
+    }
+}
+
+
+.nav-link {
+        font-size: 1vw; /* 뷰포트의 너비 기준으로 크기 조정 */
+        margin: 0.5em;
+        padding: 0.5em 1em;
+        color: #4B0082; /* indigo 색상 */
+        text-decoration: none;
+        transition: font-size 0.2s ease-in-out;
+    }
+    .nav-link:hover {
+        text-decoration: underline;
+    }
+
+    @media (max-width: 768px) {
+        .nav-link {
+            font-size: 2vw; /* 작은 화면에서는 더 작은 크기로 조정 */
+        }
+    }
+
+
+
+
+
 
 
 </style>
