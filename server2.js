@@ -131,71 +131,42 @@ app.get('/ezicon', (req, res) => {
 });
 
 
-// server2.js에서 새로운 MySQL 서버 연결
-const anotherConnection = mysql.createConnection({
-    host: process.env.ANOTHER_DB_HOST || '175.125.92.248',
-    port: process.env.ANOTHER_DB_PORT || 3306,
-    user: process.env.ANOTHER_DB_USER || 'incom_user',
-    password: process.env.ANOTHER_DB_PASSWORD || 'rlawjdtns00',
-    database: process.env.ANOTHER_DB_NAME || 'db_ezs',
-    charset: process.env.ANOTHER_DB_CHARSET || 'utf8'
-});
 
-// 두 번째 서버 연결 테스트
-anotherConnection.connect((error) => {
-    if (error) {
-        console.error('Another Database connection failed:', error);
-        return;
-    }
-    console.log('Connected to the another database.');
-});
-
-// `/api/search-another`에 대한 POST 요청 핸들러
 app.post('/api/search-another', (req, res) => {
-    // POST 요청에서 컨테이너 번호를 가져옴
+    // 쿼리 및 파라미터를 함수 내부에 선언하여 범위 문제 해결
     const containerNumber = req.body.containerNumber.trim();
-
-    // 컨테이너 번호 길이 확인
-    if (containerNumber.length !== 11) {
-        return res.status(400).json({ error: 'Invalid container number. Must be 11 characters.' });
-    }
-
-    // 날짜 범위를 구함
     const today = new Date().toISOString().slice(0, 10);
     const yesterday = new Date(new Date().getTime() - 24 * 60 * 60 * 1000).toISOString().slice(0, 10);
 
-    // 쿼리문과 파라미터 준비
-    const query = `
+    const query2 = `
     SELECT M_PORT
-    FROM t_work
-    WHERE CON_FE = "F"
-    AND DIV_LOC = "부산북항"
-    AND DATE_FORMAT(W_DATE_POIN, '%Y-%m-%d') BETWEEN ? AND ?
-    AND CON_NO = ?;
+    FROM bo_hacha
+    WHERE CON = ?
+    AND M_PART = '부산북항'
+    AND M_DATE BETWEEN ? AND ?;
     `;
-    const parameters = [yesterday, today, containerNumber];
+    const parameters = [containerNumber, yesterday, today];
 
-    // 쿼리와 파라미터를 콘솔에 출력
-    console.log('Executing query:', query);
+    // 쿼리 및 파라미터 확인을 위해 출력
+    console.log('Executing query:', query2);
     console.log('With parameters:', parameters);
 
-    // 데이터베이스 쿼리 실행
-    anotherConnection.query(query, parameters, (error, results) => {
+    connection.query(query2, parameters, (error, results) => {
         if (error) {
             console.error('Database query error:', error);
+            console.error('Failed Query:', query2);
             return res.status(500).json({ error: 'Server error' });
         }
 
-        // 결과를 콘솔에 출력하여 M_PORT 확인
         console.log('Query results:', results);
 
-        if (results.length > 0 && results[0].M_PORT) {
-            console.log('Extracted M_PORT:', results[0].M_PORT);
-            return res.json({ m_port: results[0].M_PORT });
-        } else {
-            console.log('Container not found or missing M_PORT');
-            return res.status(404).json({ error: 'Container not found or missing M_PORT' });
+        if (results.length === 0) {
+            console.log(`Container number ${containerNumber} not found`);
+            return res.status(404).json({ error: `Container number ${containerNumber} not found` });
         }
+
+        console.log('Extracted M_PORT:', results[0].M_PORT);
+        return res.json({ m_port: results[0].M_PORT });
     });
 });
 
@@ -204,9 +175,59 @@ app.post('/api/search-another', (req, res) => {
 
 
 
+// 두동-------------------------------------------------------------------------------------------------------------------------------------------
+
+app.set('view engine', 'ejs');  
+app.set('views', path.join(__dirname, 'views'))  
+
+// '/dudong' 라우트 설정
+app.get('/dudong', (req, res) => {
+    // 세션에 저장된 사용자 정보가 없으면 로그인 페이지로 리다이렉트
+    if (!req.session.user) {
+        return res.redirect('/login');
+    }
+    res.render('index(두동)', { user: req.session.user });
+});
 
 
 
+app.post('/api/search-another2', (req, res) => {
+    // 쿼리 및 파라미터를 함수 내부에 선언하여 범위 문제 해결
+    const containerNumber = req.body.containerNumber.trim();
+    const today = new Date().toISOString().slice(0, 10);
+    const yesterday = new Date(new Date().getTime() - 24 * 60 * 60 * 1000).toISOString().slice(0, 10);
+
+    const query3 = `
+    SELECT M_PORT
+    FROM bo_hacha
+    WHERE CON = ?
+    AND M_PART = '두동'
+    AND M_DATE BETWEEN ? AND ?;
+    `;
+    const parameters = [containerNumber, yesterday, today];
+
+    // 쿼리 및 파라미터 확인을 위해 출력
+    console.log('Executing query:', query3);
+    console.log('With parameters:', parameters);
+
+    connection.query(query3, parameters, (error, results) => {
+        if (error) {
+            console.error('Database query error:', error);
+            console.error('Failed Query:', query3);
+            return res.status(500).json({ error: 'Server error' });
+        }
+
+        console.log('Query results:', results);
+
+        if (results.length === 0) {
+            console.log(`Container number ${containerNumber} not found`);
+            return res.status(404).json({ error: `Container number ${containerNumber} not found` });
+        }
+
+        console.log('Extracted M_PORT:', results[0].M_PORT);
+        return res.json({ m_port: results[0].M_PORT });
+    });
+});
 
 
 
