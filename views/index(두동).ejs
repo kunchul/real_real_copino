@@ -468,13 +468,14 @@ body {
     }
 
     .search-section, .result-section {
-        padding: 8px;
-        font-size: 10px;
+        padding: 12px;
+        font-size: 14px;
     }
 
     .search-input {
         width: 90%; /* 너비를 90%로 확대 */
         padding: 12px;
+        align-items: center; /* 가운데 정렬 */
         font-size: 14px;
     }
 
@@ -605,7 +606,16 @@ document.getElementById('search-button').addEventListener('click', function () {
     });
 });
 
+// input 요소를 가져옵니다.
+const inputElement = document.getElementById('container-number');
 
+// input 요소에 이벤트 리스너를 추가합니다.
+inputElement.addEventListener('input', function() {
+    // 현재 입력된 값을 가져옵니다.
+    const currentValue = this.value;
+    // 대문자로 변환하여 다시 입력란에 설정합니다.
+    this.value = currentValue.toUpperCase();
+});
 
 
 
