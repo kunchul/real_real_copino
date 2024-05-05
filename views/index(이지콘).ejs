@@ -603,7 +603,16 @@ document.getElementById('search-button').addEventListener('click', function () {
     });
 });
 
+// input 요소를 가져옵니다.
+const inputElement = document.getElementById('container-number');
 
+// input 요소에 이벤트 리스너를 추가합니다.
+inputElement.addEventListener('input', function() {
+    // 현재 입력된 값을 가져옵니다.
+    const currentValue = this.value;
+    // 대문자로 변환하여 다시 입력란에 설정합니다.
+    this.value = currentValue.toUpperCase();
+});
 
 
 
