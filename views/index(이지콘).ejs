@@ -24,7 +24,7 @@
         </div>
         
     </div>
-    <div id="nav-items" class="hidden flex sm-w-100pc flex-column md-flex md-flex-row md-justify-end items-center">
+    <div id="nav-items" class="flex sm-w-100pc flex-column md-flex md-flex-row md-justify-end items-center">
         <% if (['manage', 'employee', 'company_delivery'].includes(user.role)) { %>
             <a href="배차관리" class="nav-link">배차관리</a>
         <% } %>
@@ -147,6 +147,7 @@
 
 </html>
 <style>
+/* 기본 스타일 */
 .auth-section {
     display: flex;
     flex-direction: column;
@@ -162,8 +163,41 @@
     padding: 30px;
     border-radius: 8px;
     max-width: 620px;
-    width: 200%;
+    width: 100%; /* 변경 */
     box-shadow: 0 4px 8px rgba(0, 0, 0, 0.1); /* 그림자 효과 추가 */
+}
+
+.button-group {
+    display: flex;
+    flex-direction: column;
+    gap: 50px;
+}
+
+@media only screen and (max-width: 480px) {
+    .auth-container {
+        padding: 10px; /* 패딩을 줄임 */
+        max-width: 70%; /* 최대 너비를 조정 */
+        font-size: 14px;
+        margin: 0 auto; /* 가운데 정렬 */
+    }
+
+    .button-group {
+        display: flex;
+        flex-direction: column;
+        gap: 10px; /* 간격을 줄임 */
+        align-items: center; /* 버튼 그룹을 세로 중앙 정렬 */
+    }
+
+    .btn-action.btn-load,
+    .btn-action.btn-unload,
+    .btn-action.btn-location,
+    .btn-action.btn-yard,
+    .btn-action.btn-container {
+        width: 90%; /* 버튼을 화면 너비에 맞게 설정 */
+        padding: 20px; /* 내부 여백 설정 */
+        font-size: 20px; /* 버튼 텍스트 크기 조정 */
+        box-sizing: border-box; /* 내부 여백과 테두리를 포함한 전체 크기로 설정 */
+    }
 }
 
 
@@ -265,21 +299,11 @@ body {
     font-family: 'Muli', Arial, sans-serif;
 }
 
-.auth-section {
-    display: flex;
-    flex-direction: column;
-    justify-content: center;
-    align-items: center;
-    padding: 40px;
-}
 
 
 
-.button-group {
-    display: flex;
-    flex-direction: column;
-    gap: 50px;
-}
+
+
 
 .btn-action {
     width: 200%;          /* 너비를 최대화 */
@@ -328,6 +352,7 @@ body {
 
 
 
+
 /* 모달 컨테이너 */
 .modal {
     position: fixed;
@@ -345,7 +370,7 @@ body {
 }
 
 /* 작은 화면을 위한 미디어 쿼리 */
-@media (max-width: 768px) {
+@media (max-width: 480px) {
     .modal {
         width: 90%; /* 모바일 화면에서는 더 작은 크기로 */
         padding: 1em; /* 내 내용도 적당히 조정 */
@@ -432,27 +457,66 @@ body {
     font-weight: bold;
 }
 
+/* 미디어 쿼리: 모바일 반응형 */
+@media (max-width: 480px) {
+    .modal-content {
+        width: 90%; /* 작은 화면에서는 크기를 90%로 */
+        max-width: 300px; /* 최대 크기 제한 */
+        padding: 15px; /* 패딩 축소 */
+    }
+
+    .search-section, .result-section {
+        padding: 8px;
+        font-size: 10px;
+    }
+
+    .search-input {
+        width: 90%; /* 너비를 90%로 확대 */
+        padding: 12px;
+        font-size: 14px;
+    }
+
+    .search-button {
+        padding: 10px 20px;
+        font-size: 14px;
+    }
+
+    .result-display {
+        padding: 10px;
+        font-size: 14px;
+    }
+}
 
 
 
-
-
-
+/* nav-link 스타일 */
 .nav-link {
-    font-size: 1vw; /* 뷰포트의 너비 기준으로 크기 조정 */
+    font-size: 1.5em; /* 글꼴 크기 키우기 */
     margin: 0.5em;
     padding: 0.5em 1em;
-    color: #4B0082; /* indigo 색상 */
+    color: #4B0082;
     text-decoration: none;
     transition: font-size 0.2s ease-in-out;
 }
+
 .nav-link:hover {
     text-decoration: underline;
 }
 
-@media (max-width: 768px) {
+
+/* 작은 화면을 위한 미디어 쿼리 */
+@media (max-width: 400px) {
+    #nav-items {
+        display: flex; /* 가로 방향 배치 */
+        flex-direction: column; /* 메뉴 항목을 세로로 배치 */
+        align-items: center; /* 가운데 정렬 */
+        gap: 10px; /* 항목 사이 간격 */
+    }
+
     .nav-link {
-        font-size: 2vw; /* 작은 화면에서는 더 작은 크기로 조정 */
+        font-size: 1.2em; /* 글씨 크기를 작게 조정 */
+        margin: 0.5em 0; /* 좀 더 작은 여백 설정 */
+        padding: 0.3em 0.6em; /* 좀 더 작은 내부 여백 설정 */
     }
 }
 
