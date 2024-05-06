@@ -24,7 +24,7 @@ app.use(session({
     cookie: {
         secure: false,
         httpOnly: true,
-        maxAge: 1000 * 60 * 60 // 쿠키 유효기간 1시간
+        maxAge: 15 * 60 * 60 * 1000
     }
 }));
 
@@ -194,21 +194,23 @@ app.get('/dudong', (req, res) => {
 
 
 app.post('/api/search-another2', (req, res) => {
-    // 쿼리 및 파라미터를 함수 내부에 선언하여 범위 문제 해결
     const containerNumber = req.body.containerNumber.trim();
     const today = new Date().toISOString().slice(0, 10);
     const yesterday = new Date(new Date().getTime() - 24 * 60 * 60 * 1000).toISOString().slice(0, 10);
 
+    // 입력된 문자열에서 7자리 이상인 부분을 추출
+    const searchString = containerNumber.length >= 7 ? containerNumber.substring(containerNumber.length - 7) : '';
+
+    // SQL 쿼리에서 LIKE 연산자를 사용하여 해당 문자열을 검색
     const query3 = `
     SELECT M_PORT
     FROM bo_hacha
-    WHERE CON = ?
+    WHERE CON LIKE '%${searchString}'
     AND M_PART = '두동'
     AND M_DATE BETWEEN ? AND ?;
     `;
-    const parameters = [containerNumber, yesterday, today];
+    const parameters = [yesterday, today];
 
-    // 쿼리 및 파라미터 확인을 위해 출력
     console.log('Executing query:', query3);
     console.log('With parameters:', parameters);
 
@@ -230,6 +232,7 @@ app.post('/api/search-another2', (req, res) => {
         return res.json({ m_port: results[0].M_PORT });
     });
 });
+
 
 
 
