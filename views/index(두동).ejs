@@ -580,11 +580,10 @@ document.getElementById('search-button').addEventListener('click', function () {
     // 입력된 컨테이너 번호 가져오기
     const containerNumber = document.getElementById('container-number').value.trim();
 
-    // 컨테이너 번호가 유효한지 확인 (예: 11자리인지)
-    if (containerNumber.length !== 7) {
-        alert('컨테이너 번호는 7자리이상 이여야 합니다.');
-        return;
-    }
+    if (containerNumber.length < 7) {
+    alert('컨테이너 번호는 7자리 이상이어야 합니다.');
+    return;
+}
 
     // 서버로 컨테이너 번호를 전송하여 하차지 조회
     fetch('/api/search-another2', {
