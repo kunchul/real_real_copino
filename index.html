@@ -263,7 +263,39 @@ label {
     opacity: 1;
     visibility: visible;
 }
+
+/* 작은 화면을 위한 미디어 쿼리 */
+/* 모바일 화면을 위한 미디어 쿼리 */
+/* 작은 화면을 위한 미디어 쿼리 */
+/* 작은 화면을 위한 미디어 쿼리 */
+/* 작은 화면을 위한 미디어 쿼리 */
+@media (max-width: 480px) {
+    .modal {
+        width: 90%; /* 모달의 가로 길이를 화면의 너비의 60%로 설정 */
+        padding: 0.9em; /* 내용의 패딩을 조정 */
+        max-height: 70vh; /* 모달의 최대 높이를 화면의 세로 길이의 60%로 설정 */
+        overflow-y: auto; /* 모달 내용이 화면을 넘어갈 경우 스크롤바 표시 */
+    }
+    .input-group {
+        width: 100%; /* 입력 그룹의 너비를 화면의 너비로 설정 */
+        margin-bottom: 1em; /* 입력 그룹 사이의 간격을 추가 */
+    }
+    .input-group label {
+        display: block; /* 레이블을 블록 요소로 변경하여 위아래로 배치 */
+        font-size: 0.5em; /* 레이블의 글꼴 크기를 줄임 */
+    }
+    .input-group input[type="text"],
+    .input-group input[type="password"] {
+        width: 100%; /* 입력 창의 너비를 100%로 설정하여 세로로 줄임 */
+        font-size: 1em; /* 입력 창의 글꼴 크기를 줄임 */
+    }
+    .btn-signup {
+        width: 100%; /* 가입하기 버튼의 너비를 100%로 설정하여 화면에 꽉 차도록 함 */
+        font-size: 0.8em; /* 가입하기 버튼의 글꼴 크기를 줄임 */
+    }
+}
 </style>
+
 
 <!-- 스크립트 추가 원본-->
 <script>
