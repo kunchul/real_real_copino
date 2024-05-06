@@ -489,14 +489,16 @@ body {
 
 
 
-/* nav-link 스타일 */
 .nav-link {
     font-size: 1.5em; /* 글꼴 크기 키우기 */
     margin: 0.5em;
     padding: 0.5em 1em;
-    color: #4B0082;
+    color: #FFFFFF; /* 텍스트 색상을 하얀색으로 설정 */
     text-decoration: none;
     transition: font-size 0.2s ease-in-out;
+    font-family: "Helvetica Neue", Arial, sans-serif; /* 둥글둥글한 글꼴 설정 */
+    font-weight: bold; /* 굵은체로 설정 */
+    border-radius: 10px; /* 요소의 모서리를 둥글게 만듦 */
 }
 
 .nav-link:hover {
@@ -576,8 +578,8 @@ document.getElementById('search-button').addEventListener('click', function () {
     const containerNumber = document.getElementById('container-number').value.trim();
 
     // 컨테이너 번호가 유효한지 확인 (예: 11자리인지)
-    if (containerNumber.length !== 11) {
-        alert('컨테이너 번호는 11자리여야 합니다.');
+    if (containerNumber.length !== 7) {
+        alert('컨테이너 번호는 7자리이상 이여야 합니다.');
         return;
     }
 
