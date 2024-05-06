@@ -23,14 +23,14 @@
             </a>
         </div>
         <div id="nav-items" class="flex sm-w-100pc flex-column md-flex md-flex-row md-justify-end items-center">
-            <% if (['manage', 'employee', 'company_delivery'].includes(user.role)) { %>
+            <% if (['manage', 'employee', 'company_driver'].includes(user.role)) { %>
                 <a href="배차관리" class="nav-link">배차관리</a>
             <% } %>
-            <% if (['manage', 'employee', 'driver', 'company_delivery', 'delivery'].includes(user.role)) { %>
+            <% if (['manage', 'employee', 'driver', 'company_driver', 'delivery'].includes(user.role)) { %>
                 <a href="ezicon" class="nav-link">이지콘 - 북항 보관소</a>
                 <a href="dudong" class="nav-link">두동 - 두동 보관소</a>
             <% } %>
-            <% if (['manage', 'employee', 'driver', 'company_delivery', 'delivery'].includes(user.role)) { %>
+            <% if (['manage', 'employee', 'driver', 'company_driver', 'delivery'].includes(user.role)) { %>
                 <a href="우암CY" class="nav-link">우암CY</a>
             <% } %>
             <% if (user.role === 'manage') { %>
@@ -38,6 +38,7 @@
             <% } %>
             <a href="/" class="nav-link">로그아웃</a>
         </div>
+
     </nav>
 
 
