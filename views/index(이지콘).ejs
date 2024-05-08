@@ -82,8 +82,11 @@
             <!-- 컨테이너 번호 검색 영역 -->
             <div class="search-section">
                 <label for="container-number">컨테이너 번호</label>
-                <input type="text" id="container-number" class="search-input" placeholder="컨테이너 번호 입력">
-                <button id="search-button" class="search-button">검색</button>
+                <div style="display: flex; align-items: center;">  <!-- 입력란과 지우기 버튼을 가로로 나란히 배치 -->
+                    <input type="text" id="container-number" class="search-input" placeholder="컨테이너 번호 입력">
+                    <button id="clear-button" class="clear-button">지우기</button>  <!-- 지우기 버튼 추가 -->
+                </div>
+                <button id="search-button" class="search-button" style="margin-top: 10px; width: 100%;">검색</button>  <!-- 검색 버튼을 하단에 배치 -->
             </div>
             
             <!-- 하차지 결과 표시 영역 -->
@@ -422,7 +425,7 @@ body {
 .search-input {
     width: 90%; /* 검색창의 너비를 증가 */
     padding: 20px; /* 검색창의 패딩을 늘려 크기 증가 */
-    font-size: 36px; /* 글자 크기 두 배로 증가 */
+    font-size: 20px; /* 글자 크기 두 배로 증가 */
     border-radius: 10px;
     border: 1px solid #ccc;
     margin-right: 20px;
@@ -431,7 +434,7 @@ body {
 }
 
 .search-button {
-    padding: 20px 40px; /* 버튼 크기를 두 배로 늘림 */
+    padding: 15px 10px; /* 버튼 크기를 두 배로 늘림 */
     font-size: 36px; /* 버튼의 글자 크기 두 배로 증가 */
     border: none;
     border-radius: 10px;
@@ -522,6 +525,29 @@ body {
     }
 }
 
+
+.clear-button {
+    padding: 15px 20px; /* 버튼의 패딩 */
+    font-size: 14px; /* 글자 크기 */
+    margin-left: 10px; /* 검색 버튼과의 간격 */
+    background-color: #ff6347; /* 버튼 배경색 */
+    color: white; /* 텍스트 색상 */
+    border: none;
+    border-radius: 5px; /* 모서리 둥글기 */
+    cursor: pointer; /* 마우스 커서 */
+}
+
+.clear-button:hover {
+    background-color: #e5533d; /* 호버 시 배경색 */
+}
+
+@media (max-width: 480px) {
+    .clear-button {
+        padding: 5px 10px; /* 모바일에서는 버튼의 패딩을 줄임 */
+        font-size: 12px; /* 모바일에서는 글자 크기를 줄임 */
+        margin-left: 5px; /* 모바일에서는 버튼 사이 간격을 줄임 */
+    }
+}
 
 </style>
 
@@ -616,6 +642,9 @@ inputElement.addEventListener('input', function() {
     this.value = currentValue.toUpperCase();
 });
 
+document.getElementById('clear-button').addEventListener('click', function() {
+    document.getElementById('container-number').value = '';  // 입력 필드 초기화
+});
 
 
     </script>
