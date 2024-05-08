@@ -115,7 +115,7 @@ app.set('views', path.join(__dirname, 'views'))
 app.get('/LOGIN', (req, res) => {
     // 세션에 저장된 사용자 정보가 없으면 로그인 페이지로 리다이렉트
     if (!req.session.user) {
-        return res.redirect('/login');
+        return res.redirect('/');
     }
     res.render('index(로그인 후)', { user: req.session.user });
 });
@@ -125,7 +125,7 @@ app.get('/LOGIN', (req, res) => {
 app.get('/ezicon', (req, res) => {
     // 세션에 저장된 사용자 정보가 없으면 로그인 페이지로 리다이렉트
     if (!req.session.user) {
-        return res.redirect('/login');
+        return res.redirect('/');
     }
     res.render('index(이지콘)', { user: req.session.user });
 });
@@ -186,7 +186,7 @@ app.set('views', path.join(__dirname, 'views'))
 app.get('/dudong', (req, res) => {
     // 세션에 저장된 사용자 정보가 없으면 로그인 페이지로 리다이렉트
     if (!req.session.user) {
-        return res.redirect('/login');
+        return res.redirect('/');
     }
     res.render('index(두동)', { user: req.session.user });
 });
