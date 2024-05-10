@@ -4,11 +4,14 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>주식회사 이지스</title>
+    <title>주식회사 이지스 </title>
     <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/shorthandcss@1.1.1/dist/shorthand.min.css" />
     <link rel="stylesheet" href="https://fonts.googleapis.com/css?family=Muli:200,300,400,500,600,700,800,900&display=swap" />
     <link rel="stylesheet" type="text/css"
         href="https://cdnjs.cloudflare.com/ajax/libs/slick-carousel/1.9.0/slick.min.css" />
+    <link rel="stylesheet" type="text/css" href="//cdn.jsdelivr.net/npm/slick-carousel@1.8.1/slick/slick-theme.css" />
+    <script src="/socket.io/socket.io.js"></script>
+    <script src="https://code.jquery.com/jquery-3.4.1.min.js"></script>
     <link rel="stylesheet" type="text/css" href="//cdn.jsdelivr.net/npm/slick-carousel@1.8.1/slick/slick-theme.css" />
 </head>
 
@@ -36,6 +39,12 @@
         <% if (['manage', 'employee', 'driver', 'company_driver', 'delivery'].includes(user.role)) { %>
             <a href="우암CY" class="nav-link">우암CY</a>
         <% } %>
+        <% if (['manage', 'employee'].includes(user.role)) { %>
+        <a href="copino_sin" class="nav-link">COPINO CHECK(신항)</a>
+        <% } %>
+        <% if (['manage', 'employee'].includes(user.role)) { %>
+            <a href="copino_bok" class="nav-link">COPINO CHECK(북항)</a>
+            <% } %>
         <% if (user.role === 'manage') { %>
             <a href="관리자페이지" class="nav-link">관리자 페이지</a>
         <% } %>
