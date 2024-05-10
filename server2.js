@@ -62,23 +62,22 @@ io.on('connection', (socket) => {
     });
 
     // 클라이언트로부터 삭제된 데이터 정보를 받아와 처리
-    socket.on('deleteData', (deletedData) => {
-        // 삭제된 데이터를 데이터베이스에서 삭제
-        connection.query('DELETE FROM ts_work WHERE id IN (?)', [deletedData], (error, results, fields) => {
+    socket.on('addData', (newData) => {
+        connection.query('INSERT INTO ts_work_new SET ?', newData, (error, results) => {
             if (error) {
                 console.error('데이터베이스 쿼리 오류:', error);
+                io.emit('errorResponse', '데이터 추가 중 오류 발생'); // 사용자에게 에러 메시지 전송
                 return;
             }
-            console.log('삭제된 데이터를 데이터베이스에서 제거했습니다.');
-            // 삭제된 데이터의 ID를 클라이언트에게 전송하여 삭제 요청
-            io.emit('deleteData', deletedData);
+            console.log('새로운 데이터를 데이터베이스에 추가했습니다.');
+            io.emit('addData', newData); // 성공적으로 데이터 추가 완료
         });
     });
 
     // 클라이언트로부터 새로 추가된 데이터 정보를 받아와 처리
     socket.on('addData', (newData) => {
         // 새로 추가된 데이터를 데이터베이스에 추가
-        connection.query('INSERT INTO ts_work SET ?', newData, (error, results, fields) => {
+        connection.query('INSERT INTO ts_work_new SET ?', newData, (error, results, fields) => {
             if (error) {
                 console.error('데이터베이스 쿼리 오류:', error);
                 return;
@@ -88,14 +87,45 @@ io.on('connection', (socket) => {
             io.emit('addData', newData);
         });
     });
+    
+
+
+    // 클라이언트로부터 삭제된 데이터 정보를 받아와 처리
+    socket.on('addData', (newData2) => {
+        connection.query('INSERT INTO ts_work_old SET ?', newData2, (error, results) => {
+            if (error) {
+                console.error('데이터베이스 쿼리 오류:', error);
+                io.emit('errorResponse', '데이터 추가 중 오류 발생'); // 사용자에게 에러 메시지 전송
+                return;
+            }
+            console.log('새로운 데이터를 데이터베이스에 추가했습니다.');
+            io.emit('addData', newData2); // 성공적으로 데이터 추가 완료
+        });
+    });
+
+    // 클라이언트로부터 새로 추가된 데이터 정보를 받아와 처리
+    socket.on('addData', (newData2) => {
+        // 새로 추가된 데이터를 데이터베이스에 추가
+        connection.query('INSERT INTO ts_work_old SET ?', newData2, (error, results, fields) => {
+            if (error) {
+                console.error('데이터베이스 쿼리 오류:', error);
+                return;
+            }
+            console.log('새로운 데이터를 데이터베이스에 추가했습니다.');
+            // 추가된 데이터를 클라이언트에게 전송하여 추가 요청
+            io.emit('addData', newData2);
+        });
+    });
 });
 
+
+// ---------------------------------------------------------------------------------------------------------------------------------------------------------------
 // 서버 리스닝 부분 변경
 server.listen(PORT, () => {
     console.log(`서버가 *:${PORT} 포트에서 실행 중입니다.`);
 });
 
-// ---------------------------------------------------------------------------------------------------------------------------------------------------------------
+
 // ---------------------------------------------------------------------------------------------------------------------------------------------------------------
 // 정적 파일 제공
 app.use(express.static(path.join(__dirname, 'public')));
@@ -237,21 +267,156 @@ app.post('/api/search-another2', (req, res) => {
 
 
 
+// 보관소(신항) 전송확인 -------------------------------------------------------------------------------
+
+app.set('view engine', 'ejs');
+app.set('views', path.join(__dirname, 'views'));
+// '/dudong' 라우트 설정
+
+app.get('/copino_sin', (req, res) => {
+    // 세션에 저장된 사용자 정보가 없으면 로그인 페이지로 리다이렉트
+    if (!req.session.user) {
+        return res.redirect('/');
+    }
+
+    // 데이터베이스 쿼리 실행
+    connection.query('SELECT * FROM ts_work_new', function (error, results, fields) {
+        if (error) {
+            console.error('데이터베이스 쿼리 오류:', error);
+            return res.status(500).send('데이터베이스 쿼리 오류');
+        }
+
+        // 여기에서 user 객체를 전달하고 있어야 합니다.
+        res.render('index(신항)', { data: results, user: req.session.user });
+    });
+});
+
+// lastChecked 변수를 초기화합니다.
+let lastChecked = new Date();
+
+setInterval(() => {
+    const now = new Date();
+
+    connection.query('SELECT * FROM ts_work_new WHERE CUNT> ?', [lastChecked], (error, results) => {
+        if (error) {
+            console.error('데이터베이스 쿼리 오류:', error);
+            io.emit('error', { message: '데이터 조회 중 오류 발생' });
+            return;
+        }
+
+        if (results.length > 0) {
+            console.log('변경된 데이터:', results);
+            io.emit('updateData', results);
+        }
+
+        lastChecked = now;
+    });
+}, 2000);
 
 
+// '/delete-container' 라우트 설정
+app.post('/delete-container', (req, res) => {
+    if (!req.session.user) {
+        return res.status(401).send('인증이 필요합니다.');
+    }
+
+    const containerIds = req.body.containerIds;
+    if (!containerIds || containerIds.length === 0) {
+        return res.status(400).send('삭제할 컨테이너 ID가 지정되지 않았습니다.');
+    }
+
+    const placeholders = containerIds.map(() => '?').join(',');
+    const sqlQuery = `DELETE FROM ts_work_new WHERE CUNT IN (${placeholders})`;
+
+    connection.query(sqlQuery, containerIds, (error, results) => {
+        if (error) {
+            console.error('데이터베이스 쿼리 오류:', error);
+            return res.status(500).send('데이터베이스 쿼리 오류');
+        }
+
+        console.log(`${results.affectedRows}개의 행이 삭제되었습니다.`);
+        res.send({ message: `${results.affectedRows}개의 행이 삭제되었습니다.` });
+    });
+});
 
 
+// 보관소(북항) 전송확인 -------------------------------------------------------------------------------
 
+app.set('view engine', 'ejs');
+app.set('views', path.join(__dirname, 'views'));
+// '/dudong' 라우트 설정
 
+app.get('/copino_bok', (req, res) => {
+    // 세션에 저장된 사용자 정보가 없으면 로그인 페이지로 리다이렉트
+    if (!req.session.user) {
+        return res.redirect('/');
+    }
 
+    // 데이터베이스 쿼리 실행
+    connection.query('SELECT * FROM ts_work_old', function (error, results, fields) {
+        if (error) {
+            console.error('데이터베이스 쿼리 오류:', error);
+            return res.status(500).send('데이터베이스 쿼리 오류');
+        }
 
+        // 여기에서 user 객체를 전달하고 있어야 합니다.
+        res.render('index(북항)', { data: results, user: req.session.user });
+    });
+});
 
+// lastChecked 변수를 초기화합니다.
+let lastChecked2 = new Date();
 
+setInterval(() => {
+    const now = new Date();
 
+    connection.query('SELECT * FROM ts_work_old WHERE CUNT> ?', [lastChecked2], (error, results) => {
+        if (error) {
+            console.error('데이터베이스 쿼리 오류:', error);
+            io.emit('error', { message: '데이터 조회 중 오류 발생' });
+            return;
+        }
 
+        if (results.length > 0) {
+            console.log('변경된 데이터:', results);
+            io.emit('updateData2', results);
+        }
 
+        lastChecked2 = now;
+    });
+}, 2000);
 
+app.post('/delete-container2', (req, res) => {
+    // 사용자 인증 확인
+    if (!req.session.user) {
+        // 사용자가 인증되지 않은 경우 401 상태 코드와 메시지 반환
+        return res.status(401).send('인증이 필요합니다.');
+    }
 
+    // 요청에서 컨테이너 ID 목록 추출
+    const containerIds = req.body.containerIds;
+    if (!containerIds || containerIds.length === 0) {
+        // 컨테이너 ID가 지정되지 않은 경우 400 상태 코드와 메시지 반환
+        return res.status(400).send('삭제할 컨테이너 ID가 지정되지 않았습니다.');
+    }
+
+    // 컨테이너 ID를 SQL 쿼리에 사용할 수 있도록 쿼리문 생성
+    const placeholders = containerIds.map(() => '?').join(',');
+    const sqlQuery = `DELETE FROM ts_work_old WHERE CUNT IN (${placeholders})`;
+
+    // 데이터베이스 쿼리 실행
+    connection.query(sqlQuery, containerIds, (error, results) => {
+        if (error) {
+            // 오류 발생 시 500 상태 코드와 오류 메시지 반환
+            console.error('데이터베이스 쿼리 오류:', error);
+            return res.status(500).send('데이터베이스 쿼리 오류');
+        }
+
+        // 삭제된 행의 수를 로그로 기록하고 응답 반환
+        console.log(`${results.affectedRows}개의 행이 삭제되었습니다.`);
+        res.send({ message: `${results.affectedRows}개의 행이 삭제되었습니다.` });
+    });
+});
 
 //본선 전송확인 ---------------------------------------------------------------------------------------------------------------------------------------------------------------
 
@@ -266,7 +431,7 @@ app.get('/TS', function (req, res) {
         }
 
         // ts.ejs 템플릿을 렌더링하여 클라이언트에게 전송
-        res.render('ts', { data: results });
+        res.render('ts', { data: results, user: req.session.user });
     });
 });
 
@@ -290,6 +455,8 @@ setInterval(() => {
 app.get('/local', function (req, res) {
     res.sendFile(path.join(__dirname, 'local.html'));
 });
+
+
 
 //로그인 / 회원가입 ---------------------------------------------------------------------------------------------------------------------------------------------------------------
 
