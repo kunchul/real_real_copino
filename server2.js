@@ -20,13 +20,19 @@ const today = moment().format('YYYY-MM-DD');
 app.use(session({
     secret: 'your_secret_key',
     resave: false,
+    rolling: true,  // 요청이 있을 때마다 세션 쿠키의 만료 시간을 갱신
     saveUninitialized: false,
     cookie: {
-        secure: false,
+        secure: false,  // 프로덕션 환경에서는 HTTPS 사용 시 true로 변경
         httpOnly: true,
-        maxAge: 15 * 60 * 60 * 1000
+        maxAge: 24 * 60 * 60 * 1000  // 24시간
     }
 }));
+
+// 세션을 유지하기 위한 간단한 API 라우트
+app.get('/keep-session-alive', (req, res) => {
+    res.send('Session is refreshed');
+});
 
 // Body-parser 미들웨어 사용 설정
 app.use(bodyParser.urlencoded({ extended: false }));
@@ -61,61 +67,82 @@ io.on('connection', (socket) => {
         console.log('User disconnected');
     });
 
-    // 클라이언트로부터 삭제된 데이터 정보를 받아와 처리
-    socket.on('addData', (newData) => {
-        connection.query('INSERT INTO ts_work_new SET ?', newData, (error, results) => {
+
+
+socket.on('addData', (newData) => {
+    connection.query('INSERT INTO ts_work_new SET ?', newData, (error, results) => {
+        if (error) {
+            console.error('데이터베이스 쿼리 오류:', error);
+            io.emit('errorResponse', '데이터 추가 중 오류 발생');
+            return;
+        }
+        console.log('새로운 데이터를 데이터베이스에 추가했습니다.');
+        // INSERT 성공 후 데이터를 정렬하여 다시 조회
+        connection.query('SELECT * FROM ts_work_new WHERE CUNT > ? ORDER BY COPINO_TIME DESC;', (error, sortedResults) => {
             if (error) {
-                console.error('데이터베이스 쿼리 오류:', error);
-                io.emit('errorResponse', '데이터 추가 중 오류 발생'); // 사용자에게 에러 메시지 전송
+                console.error('데이터베이스 조회 오류:', error);
                 return;
             }
-            console.log('새로운 데이터를 데이터베이스에 추가했습니다.');
-            io.emit('addData', newData); // 성공적으로 데이터 추가 완료
+            // 조회된 정렬된 데이터를 클라이언트에 전송
+            io.emit('updateData', sortedResults);
         });
     });
+});
 
-    // 클라이언트로부터 새로 추가된 데이터 정보를 받아와 처리
-    socket.on('addData', (newData) => {
-        // 새로 추가된 데이터를 데이터베이스에 추가
-        connection.query('INSERT INTO ts_work_new SET ?', newData, (error, results, fields) => {
-            if (error) {
-                console.error('데이터베이스 쿼리 오류:', error);
-                return;
-            }
-            console.log('새로운 데이터를 데이터베이스에 추가했습니다.');
-            // 추가된 데이터를 클라이언트에게 전송하여 추가 요청
-            io.emit('addData', newData);
-        });
-    });
-    
-
-
-    // 클라이언트로부터 삭제된 데이터 정보를 받아와 처리
-    socket.on('addData', (newData2) => {
-        connection.query('INSERT INTO ts_work_old SET ?', newData2, (error, results) => {
-            if (error) {
-                console.error('데이터베이스 쿼리 오류:', error);
-                io.emit('errorResponse', '데이터 추가 중 오류 발생'); // 사용자에게 에러 메시지 전송
-                return;
-            }
-            console.log('새로운 데이터를 데이터베이스에 추가했습니다.');
-            io.emit('addData', newData2); // 성공적으로 데이터 추가 완료
-        });
-    });
-
-    // 클라이언트로부터 새로 추가된 데이터 정보를 받아와 처리
-    socket.on('addData', (newData2) => {
-        // 새로 추가된 데이터를 데이터베이스에 추가
-        connection.query('INSERT INTO ts_work_old SET ?', newData2, (error, results, fields) => {
+socket.on('addData', (newData) => {
+    connection.query('INSERT INTO ts_work_old SET ?', newData, (error, results) => {
+        if (error) {
+            console.error('데이터베이스 쿼리 오류:', error);
+            return;
+        }
+        console.log('새로운 데이터를 데이터베이스에 추가했습니다.');
+        // 데이터 추가 후 정렬된 전체 데이터를 조회
+        connection.query('SELECT * FROM ts_work_old WHERE CUNT > ? ORDER BY COPINO_TIME DESC;', (error, sortedResults) => {
             if (error) {
                 console.error('데이터베이스 쿼리 오류:', error);
                 return;
             }
-            console.log('새로운 데이터를 데이터베이스에 추가했습니다.');
-            // 추가된 데이터를 클라이언트에게 전송하여 추가 요청
-            io.emit('addData', newData2);
+            // 정렬된 데이터를 클라이언트에게 전송
+            io.emit('updateData', sortedResults);
         });
     });
+});
+
+
+// 클라이언트로부터 데이터를 받고 데이터베이스에 삽입
+socket.on('addData', (newData2) => {
+    connection.query('INSERT INTO ts_work_old SET ?', newData2, (error, results) => {
+        if (error) {
+            console.error('데이터베이스 쿼리 오류:', error);
+            io.emit('errorResponse', '데이터 추가 중 오류 발생');
+            return;
+        }
+        console.log('새로운 데이터를 데이터베이스에 추가했습니다.');
+        // INSERT 성공 후 데이터를 정렬하여 다시 조회
+        connection.query('SELECT * FROM ts_work_old ORDER BY COPINO_TIME DESC', (error, sortedResults) => {
+            if (error) {
+                console.error('데이터베이스 조회 오류:', error);
+                return;
+            }
+            // 조회된 정렬된 데이터를 클라이언트에 전송
+            io.emit('updateData', sortedResults);
+        });
+    });
+});
+
+// 클라이언트로부터 새로 추가된 데이터 정보를 받아와 처리
+socket.on('addData', (newData2) => {
+    // 새로 추가된 데이터를 데이터베이스에 추가
+    connection.query('INSERT INTO ts_work_old SET ?', newData2, (error, results, fields) => {
+        if (error) {
+            console.error('데이터베이스 쿼리 오류:', error);
+            return;
+        }
+        console.log('새로운 데이터를 데이터베이스에 추가했습니다.');
+        // 추가된 데이터를 클라이언트에게 전송하여 추가 요청
+        io.emit('addData', newData2);
+    });
+});
 });
 
 
@@ -297,7 +324,7 @@ let lastChecked = new Date();
 setInterval(() => {
     const now = new Date();
 
-    connection.query('SELECT * FROM ts_work_new WHERE CUNT> ?', [lastChecked], (error, results) => {
+    connection.query('SELECT * FROM ts_work_new WHERE CUNT > ? ORDER BY COPINO_TIME DESC;', [lastChecked], (error, results) => {
         if (error) {
             console.error('데이터베이스 쿼리 오류:', error);
             io.emit('error', { message: '데이터 조회 중 오류 발생' });
@@ -370,7 +397,9 @@ let lastChecked2 = new Date();
 setInterval(() => {
     const now = new Date();
 
-    connection.query('SELECT * FROM ts_work_old WHERE CUNT> ?', [lastChecked2], (error, results) => {
+    connection.query('SELECT * FROM ts_work_old WHERE CUNT > ? ORDER BY COPINO_TIME DESC;', [lastChecked2], (error, results) => {
+
+        
         if (error) {
             console.error('데이터베이스 쿼리 오류:', error);
             io.emit('error', { message: '데이터 조회 중 오류 발생' });
