@@ -31,7 +31,7 @@
                     resultCell = '<td class="transmission-error-2 error">' + row.COPINO_RESULT + '</td>';
                 }
                 newRow.append(resultCell);
-                newRow.append('<td class="gate-in">' + (row.COPINO_TIME || '데이터 없음') + '</td>');
+                newRow.append('<td class="gate-in">' + (row.COPINO_TIME || '-') + '</td>');
                 $('#ts').append(newRow);
             });
         });         
@@ -42,7 +42,7 @@
         }
 
         // 10초마다 페이지 새로 고침
-        setInterval(refreshPage, 10000); // 10초(10000밀리초)마다 refreshPage 함수 호출
+        setInterval(refreshPage, 60000); // 10초(10000밀리초)마다 refreshPage 함수 호출
         
     </script>
 
@@ -499,6 +499,14 @@
         }
     }
 
+    document.addEventListener('DOMContentLoaded', function() {
+    // 매 15분마다 서버에 세션 갱신 요청을 보냄
+        setInterval(() => {
+            fetch('/keep-session-alive')
+                .then(response => console.log('Session refreshed'))
+                .catch(err => console.log('Error refreshing session', err));
+        }, 15 * 60 * 1000);  // 900000 milliseconds
+        });
 
 
 
