@@ -805,7 +805,7 @@ app.post('/insert-onorder', (req, res) => {
                 SELECT S_NO, W_IDX
                 FROM t_work_seq
                 WHERE S_NO = ? AND S_DONE = 'N'
-                ORDER BY S_DONE
+                ORDER BY S_NO
                 LIMIT 1
             `;
 
