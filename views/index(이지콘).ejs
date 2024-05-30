@@ -119,18 +119,18 @@
             
             <!-- 컨테이너 번호 검색 영역 -->
             <div class="search-section">
-                <label for="container-number">컨테이너 번호</label>
+                <label for="location-container-number">컨테이너 번호</label>
                 <div style="display: flex; align-items: center;">  <!-- 입력란과 지우기 버튼을 가로로 나란히 배치 -->
-                    <input type="text" id="container-number" class="search-input" placeholder="컨테이너 번호 입력">
-                    <button id="clear-button" class="clear-button">지우기</button>  <!-- 지우기 버튼 추가 -->
+                    <input type="text" id="location-container-number" class="search-input" placeholder="컨테이너 번호 입력">
+                    <button id="location-clear-button" class="clear-button">지우기</button>  <!-- 지우기 버튼 추가 -->
                 </div>
-                <button id="search-button" class="search-button" style="margin-top: 10px; width: 100%;">검색</button>  <!-- 검색 버튼을 하단에 배치 -->
+                <button id="location-search-button" class="search-button" style="margin-top: 10px; width: 100%;">검색</button>  <!-- 검색 버튼을 하단에 배치 -->
             </div>
             
             <!-- 하차지 결과 표시 영역 -->
             <div class="result-section">
                 <label>하차지</label>
-                <div id="unload-result" class="result-display">결과가 여기에 표시됩니다.</div>
+                <div id="location-unload-result" class="result-display">결과가 여기에 표시됩니다.</div>
             </div>
         </div>
     </div>
@@ -995,6 +995,10 @@ body {
 <!-- 스크립트 추가 -->
 <script>
 
+
+// 하차지 조회---------------------------------------------------------------------------------------------------------------------------------------------ㅍ
+
+
 document.addEventListener("DOMContentLoaded", function() {
     var modals = document.querySelectorAll(".modal");
     var closeButtons = document.querySelectorAll(".close");
@@ -1013,9 +1017,12 @@ document.addEventListener("DOMContentLoaded", function() {
             // 선택한 모달만 열기
             if (modal) {
                 modal.style.display = "block";
-                // 모달이 열릴 때마다 입력 필드를 초기화하고 새로운 조회 수행
-                document.getElementById('container-number').value = ''; // 입력 필드 초기화
-                document.getElementById('unload-result').innerText = '결과가 여기에 표시됩니다.'; // 결과 초기화
+
+                // 모달이 열릴 때마다 입력 필드와 결과 초기화
+                if (modalId === "modal-location") {
+                    document.getElementById('location-container-number').value = ''; // 입력 필드 초기화
+                    document.getElementById('location-unload-result').innerText = '결과가 여기에 표시됩니다.'; // 결과 초기화
+                }
             }
         });
     });
@@ -1037,15 +1044,15 @@ document.addEventListener("DOMContentLoaded", function() {
     });
 });
 
-// 컨테이너 번호 검색 버튼 클릭 시 이벤트 처리
-document.getElementById('search-button').addEventListener('click', function () {
+// location-container-number 검색 버튼 클릭 시 이벤트 처리
+document.getElementById('location-search-button').addEventListener('click', function () {
     // 입력된 컨테이너 번호 가져오기
-    const containerNumber = document.getElementById('container-number').value.trim();
+    const containerNumber = document.getElementById('location-container-number').value.trim();
 
-    // 컨테이너 번호가 유효한지 확인 (예: 11자리인지)
+    // 컨테이너 번호가 유효한지 확인
     if (containerNumber.length < 7) {
-    alert('컨테이너 번호는 7자리 이상이어야 합니다.');
-    return;
+        alert('컨테이너 번호는 7자리 이상이어야 합니다.');
+        return;
     }
 
     // 서버로 컨테이너 번호를 전송하여 하차지 조회
@@ -1062,41 +1069,40 @@ document.getElementById('search-button').addEventListener('click', function () {
     })
     .then(data => {
         // 서버 응답으로 받은 하차지 정보를 화면에 표시
-        document.getElementById('unload-result').innerText = `${data.m_port}`;
+        document.getElementById('location-unload-result').innerText = `${data.m_port}`;
     })
     .catch(error => {
         console.error('데이터 가져오기 실패:', error);
-        document.getElementById('unload-result').innerText = '결과를 찾을 수 없습니다.';
+        document.getElementById('location-unload-result').innerText = '결과를 찾을 수 없습니다.';
     });
-    });
+});
 
-    // input 요소를 가져옵니다.
-    const inputElement = document.getElementById('container-number');
+// location-container-number input 요소에 이벤트 리스너 추가
+document.getElementById('location-container-number').addEventListener('input', function() {
+    // 현재 입력된 값을 가져옵니다.
+    const currentValue = this.value;
+    // 대문자로 변환하여 다시 입력란에 설정합니다.
+    this.value = currentValue.toUpperCase();
+});
 
-    // input 요소에 이벤트 리스너를 추가합니다.
-    inputElement.addEventListener('input', function() {
-        // 현재 입력된 값을 가져옵니다.
-        const currentValue = this.value;
-        // 대문자로 변환하여 다시 입력란에 설정합니다.
-        this.value = currentValue.toUpperCase();
-    });
+// location-clear-button 버튼 클릭 시 입력 필드 초기화
+document.getElementById('location-clear-button').addEventListener('click', function() {
+    document.getElementById('location-container-number').value = '';  // 입력 필드 초기화
+});
 
-    document.getElementById('clear-button').addEventListener('click', function() {
-        document.getElementById('container-number').value = '';  // 입력 필드 초기화
-    });
-
-
-    document.addEventListener('DOMContentLoaded', function() {
-        // 매 15분마다 서버에 세션 갱신 요청을 보냄
-            setInterval(() => {
-                fetch('/keep-session-alive')
-                    .then(response => console.log('Session refreshed'))
-                    .catch(err => console.log('Error refreshing session', err));
-            }, 15 * 60 * 1000);  // 900000 milliseconds
-            });
+// 매 15분마다 서버에 세션 갱신 요청을 보냄
+document.addEventListener('DOMContentLoaded', function() {
+    setInterval(() => {
+        fetch('/keep-session-alive')
+            .then(response => console.log('Session refreshed'))
+            .catch(err => console.log('Error refreshing session', err));
+    }, 15 * 60 * 1000);  // 900000 milliseconds
+});
 
 
-            // 상차접수--------------------------------------------------------------------------------------------
+
+            
+// 상차접수--------------------------------------------------------------------------------------------
 
 
 var modal = document.getElementById("modal-load");
