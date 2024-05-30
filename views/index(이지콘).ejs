@@ -114,23 +114,22 @@
     
     <div id="modal-location" class="modal">
         <div class="modal-content">
-            <span class="close">&times;</span>
+            <span class="close" id="close-location">&times;</span>
             <h2>하차지 조회</h2>
             
-            <!-- 컨테이너 번호 검색 영역 -->
             <div class="search-section">
-                <label for="container-number">컨테이너 번호</label>
+                <label for="location-container-number">컨테이너 번호</label>
                 <div style="display: flex; align-items: center;">  <!-- 입력란과 지우기 버튼을 가로로 나란히 배치 -->
-                    <input type="text" id="container-number" class="search-input" placeholder="컨테이너 번호 입력">
-                    <button id="clear-button" class="clear-button">지우기</button>  <!-- 지우기 버튼 추가 -->
+                    <input type="text" id="location-container-number" class="search-input" placeholder="컨테이너 번호 입력">
+                    <button id="location-clear-button" class="clear-button">지우기</button>  <!-- 지우기 버튼 추가 -->
                 </div>
-                <button id="search-button" class="search-button" style="margin-top: 10px; width: 100%;">검색</button>  <!-- 검색 버튼을 하단에 배치 -->
+                <button id="location-search-button" class="search-button" style="margin-top: 10px; width: 100%;">검색</button>  <!-- 검색 버튼을 하단에 배치 -->
             </div>
             
             <!-- 하차지 결과 표시 영역 -->
             <div class="result-section">
                 <label>하차지</label>
-                <div id="unload-result" class="result-display">결과가 여기에 표시됩니다.</div>
+                <div id="location-unload-result" class="result-display">결과가 여기에 표시됩니다.</div>
             </div>
         </div>
     </div>
