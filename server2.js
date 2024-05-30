@@ -958,7 +958,7 @@ app.post('/search-container-unload', (req, res) => {
             if (results.length > 0) {
                 res.json(results[0]); // W_IDX 포함된 첫 번째 결과 반환
             } else {
-                res.json({ message: '하차할 컨테이너가 없습니다.' });
+                res.json({ message: '등록된 컨테이너 없음.(사무실 문의)' });
             }
         });
     });
