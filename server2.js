@@ -22,12 +22,11 @@ const today = moment().format('YYYY-MM-DD');
 app.use(session({
     secret: 'your_secret_key',
     resave: false,
-    rolling: true,  // 요청이 있을 때마다 세션 쿠키의 만료 시간을 갱신
     saveUninitialized: false,
     cookie: {
-        secure: false,  // 프로덕션 환경에서는 HTTPS 사용 시 true로 변경
+        secure: false,
         httpOnly: true,
-        maxAge: 24 * 60 * 60 * 1000  // 24시간
+        maxAge: 24 * 60 * 60 * 1000
     }
 }));
 
@@ -164,7 +163,15 @@ socket.on('addData', (newData2) => {
     });
 });
 });
-
+//페이지 권한
+function checkRole(allowedRoles) {
+    return function(req, res, next) {
+        if (!req.session.user || !allowedRoles.includes(req.session.user.role)) {
+            return res.redirect('/');
+        }
+        next();
+    };
+}
 
 // ---------------------------------------------------------------------------------------------------------------------------------------------------------------
 // 서버 리스닝 부분 변경
@@ -197,11 +204,86 @@ app.get('/LOGIN', (req, res) => {
     res.render('index(로그인 후)', { user: req.session.user });
 });
 
-// 이지콘 ---------------------------------------------------------------------------------------------------------------------------------------------------------------
+
+
+
+
+
+
+
+
+
+
+// 관리자 페이지---------------------------------------------------------------------------------
+
+app.set('view engine', 'ejs');  
+app.set('views', path.join(__dirname, 'views'))  
+
+// 관리자 페이지 라우트
+app.get('/manager', (req, res) => {
+    if (!req.session.user || req.session.user.role !== 'manage') {
+        return res.redirect('/');
+    }
+    res.render('index(관리자)', { user: req.session.user });
+});
+
+
+app.post('/api/search-user', (req, res) => {
+    const { id } = req.body;
+    connection.query('SELECT * FROM user WHERE ID = ?', [id], (error, results) => {
+        if (error) return res.status(500).send('Database query error');
+        if (results.length > 0) {
+            res.json(results[0]);
+        } else {
+            res.status(404).send('User not found');
+        }
+    });
+});
+
+app.post('/api/update-user', (req, res) => {
+    const { id, password, phone, car, carId, part, role } = req.body;
+    const updateFields = {};
+    if (password) updateFields.PASSWORD = password;
+    if (phone) updateFields.PHONE = phone;
+    if (car) updateFields.CAR = car;
+    if (carId) updateFields.CAR_ID = carId;
+    if (part) updateFields.PART = part;
+    if (role) updateFields.ROLE = role;
+
+    const sql = 'UPDATE user SET ? WHERE ID = ?';
+    connection.query(sql, [updateFields, id], (error, results) => {
+        if (error) return res.status(500).send('Database update error');
+        res.send('User updated');
+    });
+});
+
+app.get('/api/unassigned-accounts', (req, res) => {
+    connection.query('SELECT CAR_ID, CAR, PHONE FROM user WHERE ROLE IS NULL', (error, results) => {
+        if (error) return res.status(500).send('Database query error');
+        res.json(results);
+    });
+});
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+// 이지콘 하차지 조회 ---------------------------------------------------------------------------------------------------------------------------------------------------------------
 // '/ezicon' 라우트 설정
 app.get('/ezicon', (req, res) => {
-    // 세션에 저장된 사용자 정보가 없으면 로그인 페이지로 리다이렉트
-    if (!req.session.user) {
+    if (!req.session.user || !['manage', 'employee', 'driver', 'company_driver', 'delivery'].includes(req.session.user.role)) {
         return res.redirect('/');
     }
     res.render('index(이지콘)', { user: req.session.user });
@@ -254,15 +336,13 @@ app.post('/api/search-another', (req, res) => {
 
 
 
-// 두동-------------------------------------------------------------------------------------------------------------------------------------------
+// 두동 하차지 조회 -------------------------------------------------------------------------------------------------------------------------------------------
 
 app.set('view engine', 'ejs');  
 app.set('views', path.join(__dirname, 'views'))  
 
-// '/dudong' 라우트 설정
 app.get('/dudong', (req, res) => {
-    // 세션에 저장된 사용자 정보가 없으면 로그인 페이지로 리다이렉트
-    if (!req.session.user) {
+    if (!req.session.user || !['manage', 'employee', 'driver', 'company_driver', 'delivery'].includes(req.session.user.role)) {
         return res.redirect('/');
     }
     res.render('index(두동)', { user: req.session.user });
@@ -321,8 +401,7 @@ app.set('views', path.join(__dirname, 'views'));
 // '/dudong' 라우트 설정
 
 app.get('/copino_sin', (req, res) => {
-    // 세션에 저장된 사용자 정보가 없으면 로그인 페이지로 리다이렉트
-    if (!req.session.user) {
+    if (!req.session.user || !['manage', 'employee'].includes(req.session.user.role)) {
         return res.redirect('/');
     }
 
@@ -393,11 +472,10 @@ app.set('views', path.join(__dirname, 'views'));
 // '/dudong' 라우트 설정
 
 app.get('/copino_bok', (req, res) => {
-    // 세션에 저장된 사용자 정보가 없으면 로그인 페이지로 리다이렉트
-    if (!req.session.user) {
+    if (!req.session.user || !['manage', 'employee'].includes(req.session.user.role)) {
         return res.redirect('/');
     }
-
+    
     // 데이터베이스 쿼리 실행
     connection.query('SELECT * FROM ts_work_old', function (error, results, fields) {
         if (error) {
