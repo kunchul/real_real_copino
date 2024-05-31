@@ -134,6 +134,7 @@
 </section>
 
 <style>
+    /*전송확인 테이블----------------------------------------------------------------------------------------------*/
     .custom-table-container {
         background-color: black; /* 배경색 검정 */
         padding: 20px; /* 여백 추가 */
@@ -168,6 +169,56 @@
     .custom-table th:nth-child(n+6), .custom-table td:nth-child(n+6) {
         color: #FF4500; /* 그룹 3 텍스트 색상 */
     }
+
+    @media (max-width: 480px) {
+        .custom-table-container {
+            padding: 10px; /* 여백 줄이기 */
+            margin: 20px 0; /* 상단과 하단 마진 줄이기 */
+        }
+
+        .custom-table th, .custom-table td {
+            padding: 4px; /* 셀 내부 여백 줄이기 */
+            font-size: 8px; /* 글자 크기 줄이기 */
+        }
+
+        .custom-table th:nth-child(-n+2), .custom-table td:nth-child(-n+2) {
+            font-size: 8px; /* 그룹 1 글자 크기 줄이기 */
+        }
+
+        .custom-table th:nth-child(n+3):nth-child(-n+5), .custom-table td:nth-child(n+3):nth-child(-n+5) {
+            font-size: 8px; /* 그룹 2 글자 크기 줄이기 */
+        }
+
+        .custom-table th:nth-child(n+6), .custom-table td:nth-child(n+6) {
+            font-size: 8px; /* 그룹 3 글자 크기 줄이기 */
+        }
+    }
+
+    @media (max-width: 400px) {
+        .custom-table-container {
+            padding: 5px; /* 여백 더 줄이기 */
+            margin: 10px 0; /* 상단과 하단 마진 더 줄이기 */
+        }
+
+        .custom-table th, .custom-table td {
+            padding: 2px; /* 셀 내부 여백 더 줄이기 */
+            font-size: 8px; /* 글자 크기 더 줄이기 */
+        }
+
+        .custom-table th:nth-child(-n+2), .custom-table td:nth-child(-n+2) {
+            font-size: 8px; /* 그룹 1 글자 크기 더 줄이기 */
+        }
+
+        .custom-table th:nth-child(n+3):nth-child(-n+5), .custom-table td:nth-child(n+3):nth-child(-n+5) {
+            font-size: 8px; /* 그룹 2 글자 크기 더 줄이기 */
+        }
+
+        .custom-table th:nth-child(n+6), .custom-table td:nth-child(n+6) {
+            font-size: 8px; /* 그룹 3 글자 크기 더 줄이기 */
+        }
+    }
+
+
 
     .modal {
     font-family: 'Roboto', sans-serif; /* Roboto 폰트 적용 */
@@ -368,6 +419,56 @@
 
 <!-- 스크립트 추가 -->
 <script>
+
+// 하차지 조회-------------------------------------------------------------------------------------------
+document.getElementById('location-search-button').addEventListener('click', function () {
+    // 입력된 컨테이너 번호 가져오기
+    const containerNumber = document.getElementById('location-container-number').value.trim();
+
+    if (containerNumber.length < 7) {
+        alert('컨테이너 번호는 7자리 이상이어야 합니다.');
+        return;
+    }
+
+    // 서버로 컨테이너 번호를 전송하여 하차지 조회
+    fetch('/api/search-another2', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ containerNumber })
+    })
+    .then(response => {
+        if (!response.ok) {
+            return response.json().then(error => { throw new Error(error.error); });
+        }
+        return response.json();
+    })
+    .then(data => {
+        // 서버 응답으로 받은 하차지 정보를 화면에 표시
+        document.getElementById('location-unload-result').innerText = `${data.m_port}`;
+    })
+    .catch(error => {
+        console.error('데이터 가져오기 실패:', error);
+        document.getElementById('location-unload-result').innerText = '결과를 찾을 수 없습니다.';
+    });
+});
+
+// input 요소를 가져옵니다.
+const locationInputElement = document.getElementById('location-container-number');
+
+// input 요소에 이벤트 리스너를 추가합니다.
+locationInputElement.addEventListener('input', function() {
+    // 현재 입력된 값을 가져옵니다.
+    const currentValue = this.value;
+    // 대문자로 변환하여 다시 입력란에 설정합니다.
+    this.value = currentValue.toUpperCase();
+});
+
+document.getElementById('location-clear-button').addEventListener('click', function() {
+    document.getElementById('location-container-number').value = '';  // 입력 필드 초기화
+});
+
+//----------------------------------
+
     // 모달 닫기 버튼 이벤트 처리 함수
     document.querySelector('.close-button').addEventListener('click', function() {
         document.getElementById('signupModal').classList.add('hidden');
