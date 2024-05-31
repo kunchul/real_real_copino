@@ -42,42 +42,53 @@ app.use(bodyParser.json());
 // 환경 변수에서 포트 번호를 읽어오도록 설정
 const PORT = process.env.PORT || 31681;
 
-// 데이터베이스 연결 정보를 환경 변수에서 읽어오도록 설정
-const connection = mysql.createConnection({
+// 연결 설정
+const dbConfig1 = {
     host: 'svc.sel5.cloudtype.app',
     port: 31681,
     database: 'ts_server',
     user: 'root',
     password: 'rjscjf0739',
     charset: 'utf8mb4'
-    
-});
+};
 
-const connection2 = mysql.createConnection({
+const dbConfig2 = {
     host: '175.125.92.248',
     database: 'db_ezs',
     user: 'incom_user',
     password: 'rlawjdtns00',
     charset: 'utf8'
-});
+};
 
-// ---------------------------------------------------------------------------------------------------------------------------------------------------------------
-// 데이터베이스 연결
-connection.connect(error => {
-    if (error) {
-        console.error('Database connection failed:', error);
-        return;
-    }
-    console.log('Connected to the database.');
-});
+let connection;
+let connection2;
 
-connection2.connect(error => {
-    if (error) {
-        console.error('Database connection 2 failed:', error);
-        return;
-    }
-    console.log('Connected to database 2.');
-});
+function handleDisconnect(dbConfig, connectionName) {
+    let conn = mysql.createConnection(dbConfig);
+
+    conn.connect((err) => {
+        if (err) {
+            console.error(`Error connecting to ${connectionName}:`, err);
+            setTimeout(() => handleDisconnect(dbConfig, connectionName), 2000); // 2초 후에 다시 연결 시도
+        } else {
+            console.log(`Connected to ${connectionName}.`);
+        }
+    });
+
+    conn.on('error', (err) => {
+        console.error(`Database error on ${connectionName}:`, err);
+        if (err.code === 'PROTOCOL_CONNECTION_LOST') {
+            handleDisconnect(dbConfig, connectionName);
+        } else {
+            throw err;
+        }
+    });
+
+    return conn;
+}
+
+connection = handleDisconnect(dbConfig1, 'database 1');
+connection2 = handleDisconnect(dbConfig2, 'database 2');
 
 io.on('connection', (socket) => {
     console.log('A user connected');
@@ -86,83 +97,100 @@ io.on('connection', (socket) => {
         console.log('User disconnected');
     });
 
-
-
-socket.on('addData', (newData) => {
-    connection.query('INSERT INTO ts_work_new SET ?', newData, (error, results) => {
-        if (error) {
-            console.error('데이터베이스 쿼리 오류:', error);
-            io.emit('errorResponse', '데이터 추가 중 오류 발생');
-            return;
-        }
-        console.log('새로운 데이터를 데이터베이스에 추가했습니다.');
-        // INSERT 성공 후 데이터를 정렬하여 다시 조회
-        connection.query('SELECT * FROM ts_work_new WHERE CUNT > ? ORDER BY COPINO_TIME DESC;', (error, sortedResults) => {
+    socket.on('addData', (newData) => {
+        connection.query('INSERT INTO ts_work_new SET ?', newData, (error, results) => {
             if (error) {
-                console.error('데이터베이스 조회 오류:', error);
+                console.error('데이터베이스 쿼리 오류:', error);
+                io.emit('errorResponse', '데이터 추가 중 오류 발생');
                 return;
             }
-            // 조회된 정렬된 데이터를 클라이언트에 전송
-            io.emit('updateData', sortedResults);
+            console.log('새로운 데이터를 데이터베이스에 추가했습니다.');
+            // INSERT 성공 후 데이터를 정렬하여 다시 조회
+            connection.query('SELECT * FROM ts_work_new WHERE CUNT > ? ORDER BY COPINO_TIME DESC;', (error, sortedResults) => {
+                if (error) {
+                    console.error('데이터베이스 조회 오류:', error);
+                    return;
+                }
+                // 조회된 정렬된 데이터를 클라이언트에 전송
+                io.emit('updateData', sortedResults);
+            });
         });
     });
-});
 
-socket.on('addData', (newData) => {
-    connection.query('INSERT INTO ts_work_old SET ?', newData, (error, results) => {
-        if (error) {
-            console.error('데이터베이스 쿼리 오류:', error);
-            return;
-        }
-        console.log('새로운 데이터를 데이터베이스에 추가했습니다.');
-        // 데이터 추가 후 정렬된 전체 데이터를 조회
-        connection.query('SELECT * FROM ts_work_old WHERE CUNT > ? ORDER BY COPINO_TIME DESC;', (error, sortedResults) => {
+    socket.on('addData', (newData) => {
+        connection.query('INSERT INTO ts_work_new SET ?', newData, (error, results) => {
+            if (error) {
+                console.error('데이터베이스 쿼리 오류:', error);
+                io.emit('errorResponse', '데이터 추가 중 오류 발생');
+                return;
+            }
+            console.log('새로운 데이터를 데이터베이스에 추가했습니다.');
+            // INSERT 성공 후 데이터를 정렬하여 다시 조회
+            connection.query('SELECT * FROM ts_work_new WHERE CUNT > ? ORDER BY COPINO_TIME DESC;', (error, sortedResults) => {
+                if (error) {
+                    console.error('데이터베이스 조회 오류:', error);
+                    return;
+                }
+                // 조회된 정렬된 데이터를 클라이언트에 전송
+                io.emit('updateData', sortedResults);
+            });
+        });
+    });
+
+    socket.on('addData', (newData) => {
+        connection.query('INSERT INTO ts_work_old SET ?', newData, (error, results) => {
             if (error) {
                 console.error('데이터베이스 쿼리 오류:', error);
                 return;
             }
-            // 정렬된 데이터를 클라이언트에게 전송
-            io.emit('updateData', sortedResults);
+            console.log('새로운 데이터를 데이터베이스에 추가했습니다.');
+            // 데이터 추가 후 정렬된 전체 데이터를 조회
+            connection.query('SELECT * FROM ts_work_old WHERE CUNT > ? ORDER BY COPINO_TIME DESC;', (error, sortedResults) => {
+                if (error) {
+                    console.error('데이터베이스 쿼리 오류:', error);
+                    return;
+                }
+                // 정렬된 데이터를 클라이언트에게 전송
+                io.emit('updateData', sortedResults);
+            });
         });
     });
-});
 
-
-// 클라이언트로부터 데이터를 받고 데이터베이스에 삽입
-socket.on('addData', (newData2) => {
-    connection.query('INSERT INTO ts_work_old SET ?', newData2, (error, results) => {
-        if (error) {
-            console.error('데이터베이스 쿼리 오류:', error);
-            io.emit('errorResponse', '데이터 추가 중 오류 발생');
-            return;
-        }
-        console.log('새로운 데이터를 데이터베이스에 추가했습니다.');
-        // INSERT 성공 후 데이터를 정렬하여 다시 조회
-        connection.query('SELECT * FROM ts_work_old ORDER BY COPINO_TIME DESC', (error, sortedResults) => {
+    socket.on('addData', (newData2) => {
+        connection.query('INSERT INTO ts_work_old SET ?', newData2, (error, results) => {
             if (error) {
-                console.error('데이터베이스 조회 오류:', error);
+                console.error('데이터베이스 쿼리 오류:', error);
+                io.emit('errorResponse', '데이터 추가 중 오류 발생');
                 return;
             }
-            // 조회된 정렬된 데이터를 클라이언트에 전송
-            io.emit('updateData', sortedResults);
+            console.log('새로운 데이터를 데이터베이스에 추가했습니다.');
+            // INSERT 성공 후 데이터를 정렬하여 다시 조회
+            connection.query('SELECT * FROM ts_work_old ORDER BY COPINO_TIME DESC', (error, sortedResults) => {
+                if (error) {
+                    console.error('데이터베이스 조회 오류:', error);
+                    return;
+                }
+                // 조회된 정렬된 데이터를 클라이언트에 전송
+                io.emit('updateData', sortedResults);
+            });
+        });
+    });
+
+    socket.on('addData', (newData2) => {
+        // 새로 추가된 데이터를 데이터베이스에 추가
+        connection.query('INSERT INTO ts_work_old SET ?', newData2, (error, results, fields) => {
+            if (error) {
+                console.error('데이터베이스 쿼리 오류:', error);
+                return;
+            }
+            console.log('새로운 데이터를 데이터베이스에 추가했습니다.');
+            // 추가된 데이터를 클라이언트에게 전송하여 추가 요청
+            io.emit('addData', newData2);
         });
     });
 });
 
-// 클라이언트로부터 새로 추가된 데이터 정보를 받아와 처리
-socket.on('addData', (newData2) => {
-    // 새로 추가된 데이터를 데이터베이스에 추가
-    connection.query('INSERT INTO ts_work_old SET ?', newData2, (error, results, fields) => {
-        if (error) {
-            console.error('데이터베이스 쿼리 오류:', error);
-            return;
-        }
-        console.log('새로운 데이터를 데이터베이스에 추가했습니다.');
-        // 추가된 데이터를 클라이언트에게 전송하여 추가 요청
-        io.emit('addData', newData2);
-    });
-});
-});
+
 //페이지 권한
 function checkRole(allowedRoles) {
     return function(req, res, next) {
