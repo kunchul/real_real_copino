@@ -141,6 +141,7 @@
 </section>
 
 <style>
+    /*전송확인 테이블----------------------------------------------------------------------------------------------*/
     .custom-table-container {
         background-color: black; /* 배경색 검정 */
         padding: 20px; /* 여백 추가 */
@@ -174,6 +175,54 @@
     /* 그룹 3 텍스트 색상 */
     .custom-table th:nth-child(n+6), .custom-table td:nth-child(n+6) {
         color: #FF4500; /* 그룹 3 텍스트 색상 */
+    }
+
+    @media (max-width: 480px) {
+        .custom-table-container {
+            padding: 10px; /* 여백 줄이기 */
+            margin: 20px 0; /* 상단과 하단 마진 줄이기 */
+        }
+
+        .custom-table th, .custom-table td {
+            padding: 4px; /* 셀 내부 여백 줄이기 */
+            font-size: 8px; /* 글자 크기 줄이기 */
+        }
+
+        .custom-table th:nth-child(-n+2), .custom-table td:nth-child(-n+2) {
+            font-size: 8px; /* 그룹 1 글자 크기 줄이기 */
+        }
+
+        .custom-table th:nth-child(n+3):nth-child(-n+5), .custom-table td:nth-child(n+3):nth-child(-n+5) {
+            font-size: 8px; /* 그룹 2 글자 크기 줄이기 */
+        }
+
+        .custom-table th:nth-child(n+6), .custom-table td:nth-child(n+6) {
+            font-size: 8px; /* 그룹 3 글자 크기 줄이기 */
+        }
+    }
+
+    @media (max-width: 400px) {
+        .custom-table-container {
+            padding: 5px; /* 여백 더 줄이기 */
+            margin: 10px 0; /* 상단과 하단 마진 더 줄이기 */
+        }
+
+        .custom-table th, .custom-table td {
+            padding: 2px; /* 셀 내부 여백 더 줄이기 */
+            font-size: 8px; /* 글자 크기 더 줄이기 */
+        }
+
+        .custom-table th:nth-child(-n+2), .custom-table td:nth-child(-n+2) {
+            font-size: 8px; /* 그룹 1 글자 크기 더 줄이기 */
+        }
+
+        .custom-table th:nth-child(n+3):nth-child(-n+5), .custom-table td:nth-child(n+3):nth-child(-n+5) {
+            font-size: 8px; /* 그룹 2 글자 크기 더 줄이기 */
+        }
+
+        .custom-table th:nth-child(n+6), .custom-table td:nth-child(n+6) {
+            font-size: 8px; /* 그룹 3 글자 크기 더 줄이기 */
+        }
     }
 
     .modal {
