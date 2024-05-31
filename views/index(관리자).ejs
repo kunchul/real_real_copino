@@ -102,7 +102,7 @@
                     <option value="driver">driver</option>
                     <option value="company_driver">company_driver</option>
                     <option value="delivery">delivery</option>
-                    <option value="delivery">차단</option>
+                    <option value="차단">차단</option>
                 </select>
             </div>
             <button class="btn-action" id="update-btn">업데이트</button>
@@ -119,7 +119,7 @@
                 <table class="table">
                     <thead>
                         <tr>
-                            <th>차량아이디</th>
+                            <th>아이디</th>
                             <th>차량번호</th>
                             <th>연락처</th>
                         </tr>
@@ -516,98 +516,152 @@
             padding: 0.3em 0.6em;
         }
     }
+
+/*미권한 계정-----------------------------------------------------------------------------------------------------------*/
+    .table {
+        width: 100%;
+        border-collapse: collapse;
+    }
+
+    .table th, .table td {
+        border: 1px solid #ddd;
+        padding: 8px;
+        text-align: center;
+    }
+
+    .table th {
+        background-color: #4CAF50;
+        color: white;
+    }
+
+    .table tr:nth-child(even) {
+        background-color: #f2f2f2;
+    }
+
+    .table tr:hover {
+        background-color: #ddd;
+    }
+    @media (max-width: 480px) {
+
+        .table th, .table td {
+            padding: 4px;
+            font-size: 12px;
+        }
+
+        .table th {
+            font-size: 14px;
+        }
+
+        .close {
+            font-size: 24px;
+        }
+    }
+
+    @media (max-width: 480px) {
+        .table th, .table td {
+            font-size: 10px;
+        }
+
+        .table th {
+            font-size: 12px;
+        }
+
+        .close {
+            font-size: 20px;
+        }
+    }
+
+
+
 </style>
 
     </style>
 
     <script>
-        $(document).ready(function () {
-            $(".btn-unload").click(function () {
-                $("#modal-unload").show();
-            });
+     $(document).ready(function () {
+        $(".btn-unload").click(function () {
+            $("#modal-unload").show();
+        });
 
-            $(".btn-location").click(function () {
-                $("#modal-location").show();
-            });
-
-            $(".close").click(function () {
-                $(this).closest(".modal").hide();
-            });
-
-            $("#search-btn").click(function () {
-                const userId = $("#search-id").val();
-                $.ajax({
-                    url: "/api/search-user",
-                    method: "POST",
-                    data: { id: userId },
-                    success: function (response) {
-                        $("#password").val(response.PASSWORD);
-                        $("#phone").val(response.PHONE);
-                        $("#car").val(response.CAR);
-                        $("#car-id").val(response.CAR_ID);
-                        $("#part").val(response.PART);
-                        $("#role").val(response.ROLE);
-                    },
-                    error: function () {
-                        alert("사용자 정보를 찾을 수 없습니다.");
-                    }
-                });
-            });
-
-            $("#update-btn").click(function () {
-                const userId = $("#search-id").val();
-                const password = $("#password").val();
-                const phone = $("#phone").val();
-                const car = $("#car").val();
-                const carId = $("#car-id").val();
-                const part = $("#part").val();
-                const role = $("#role").val();
-                $.ajax({
-                    url: "/api/update-user",
-                    method: "POST",
-                    data: {
-                        id: userId,
-                        password: password,
-                        phone: phone,
-                        car: car,
-                        carId: carId,
-                        part: part,
-                        role: role
-                    },
-                    success: function () {
-                        alert("사용자 정보가 업데이트되었습니다.");
-                        $("#modal-unload").hide();
-                    },
-                    error: function () {
-                        alert("업데이트 중 오류가 발생했습니다.");
-                    }
-                });
-            });
-
-            // 권한미배정 계정 가져오기
-            $(".btn-location").click(function () {
-                $.ajax({
-                    url: "/api/unassigned-accounts",
-                    method: "GET",
-                    success: function (response) {
-                        let tbody = $("#unassigned-accounts");
-                        tbody.empty();
-                        response.forEach(account => {
-                            tbody.append(`
-                                <tr>
-                                    <td>${account.CAR_ID}</td>
-                                    <td>${account.CAR}</td>
-                                    <td>${account.PHONE}</td>
-                                </tr>
-                            `);
-                        });
-                    },
-                    error: function () {
-                        alert("권한미배정 계정을 가져오는 중 오류가 발생했습니다.");
-                    }
-                });
+        $(".btn-location").click(function () {
+            $("#modal-location").show();
+            $.ajax({
+                url: "/api/unassigned-accounts",
+                method: "GET",
+                success: function (response) {
+                    let tbody = $("#unassigned-accounts");
+                    tbody.empty();
+                    response.forEach(function(row) {
+                        tbody.append(`
+                            <tr>
+                                <td>${row.ID}</td>
+                                <td>${row.CAR}</td>
+                                <td>${row.PHONE}</td>
+                            </tr>
+                        `);
+                    });
+                },
+                error: function () {
+                    alert("권한미배정 계정을 가져오는 중 오류가 발생했습니다.");
+                }
             });
         });
+
+
+        $(".close").click(function () {
+            $(this).closest(".modal").hide();
+        });
+
+        $("#search-btn").click(function () {
+            const userId = $("#search-id").val();
+            $.ajax({
+                url: "/api/search-user",
+                method: "POST",
+                data: { id: userId },
+                success: function (response) {
+                    $("#password").val(response.PASSWORD);
+                    $("#phone").val(response.PHONE);
+                    $("#car").val(response.CAR);
+                    $("#car-id").val(response.CAR_ID);
+                    $("#part").val(response.PART);
+                    $("#role").val(response.ROLE);
+                },
+                error: function () {
+                    alert("사용자 정보를 찾을 수 없습니다.");
+                }
+            });
+        });
+
+        $("#update-btn").click(function () {
+            const userId = $("#search-id").val();
+            const password = $("#password").val();
+            const phone = $("#phone").val();
+            const car = $("#car").val();
+            const carId = $("#car-id").val();
+            const part = $("#part").val();
+            const role = $("#role").val();
+            $.ajax({
+                url: "/api/update-user",
+                method: "POST",
+                data: {
+                    id: userId,
+                    password: password,
+                    phone: phone,
+                    car: car,
+                    carId: carId,
+                    part: part,
+                    role: role
+                },
+                success: function () {
+                    alert("사용자 정보가 업데이트되었습니다.");
+                    $("#modal-unload").hide();
+                },
+                error: function () {
+                    alert("업데이트 중 오류가 발생했습니다.");
+                }
+            });
+        });
+    });
     </script>
 </body>
 
