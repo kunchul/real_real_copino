@@ -286,7 +286,7 @@ app.post('/api/update-user', (req, res) => {
 });
 
 app.get('/api/unassigned-accounts', (req, res) => {
-    connection.query('SELECT CAR_ID, CAR, PHONE FROM user WHERE ROLE IS NULL', (error, results) => {
+    connection.query('SELECT ID, CAR, PHONE FROM user WHERE ROLE IS NULL', (error, results) => {
         if (error) return res.status(500).send('Database query error');
         res.json(results);
     });
