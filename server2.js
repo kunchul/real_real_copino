@@ -13,6 +13,11 @@ const session = require('express-session');
 const moment = require('moment');
 const port = 3000;
 const iconv = require('iconv-lite');
+const cron = require('node-cron');
+const { exec } = require('child_process');
+
+
+
 
 // 어제와 오늘 날짜를 계산
 const yesterday = moment().subtract(1, 'days').format('YYYY-MM-DD');
@@ -39,8 +44,23 @@ app.get('/keep-session-alive', (req, res) => {
 app.use(bodyParser.urlencoded({ extended: false }));
 app.use(bodyParser.json());
 
+cron.schedule('0 6 * * *', () => {
+    console.log('Scheduled restart at 06:00 AM');
+    exec('pm2 restart all', (err, stdout, stderr) => {
+        if (err) {
+            console.error(`Error restarting server: ${err}`);
+            return;
+        }
+        console.log(`Server restart output: ${stdout}`);
+        console.error(`Server restart errors: ${stderr}`);
+    });
+});
+
+
 // 환경 변수에서 포트 번호를 읽어오도록 설정
 const PORT = process.env.PORT || 31681;
+
+
 
 // 연결 설정
 const dbConfig1 = {
@@ -79,14 +99,11 @@ function handleDisconnect(dbConfig, connectionName) {
         console.error(`Database error on ${connectionName}:`, err);
         if (err.code === 'PROTOCOL_CONNECTION_LOST' || err.fatal) {
             handleDisconnect(dbConfig, connectionName);
-        } else {
-            throw err;
         }
     });
 
     return conn;
 }
-
 connection = handleDisconnect(dbConfig1, 'database 1');
 connection2 = handleDisconnect(dbConfig2, 'database 2');
 
