@@ -108,37 +108,59 @@ io.on('connection', (socket) => {
     });
 
     socket.on('addData', (newData) => {
-        queryWithReconnect(dbConfig1, 'INSERT INTO ts_work_new SET ?', newData, (error, results) => {
-            if (error) {
-                console.error('데이터베이스 쿼리 오류:', error);
-                io.emit('errorResponse', '데이터 추가 중 오류 발생');
+        const conn = createConnection(dbConfig1);
+        conn.connect((err) => {
+            if (err) {
+                console.error('데이터베이스 연결 오류:', err);
+                io.emit('errorResponse', '데이터베이스 연결 중 오류 발생');
                 return;
             }
-            console.log('새로운 데이터를 데이터베이스에 추가했습니다.');
-            queryWithReconnect(dbConfig1, 'SELECT * FROM ts_work_new WHERE CUNT > ? ORDER BY COPINO_TIME DESC;', [], (error, sortedResults) => {
+            conn.query('INSERT INTO ts_work_new SET ?', newData, (error, results) => {
                 if (error) {
-                    console.error('데이터베이스 조회 오류:', error);
+                    console.error('데이터베이스 쿼리 오류:', error);
+                    io.emit('errorResponse', '데이터 추가 중 오류 발생');
+                    conn.end();
                     return;
                 }
-                io.emit('updateData', sortedResults);
+                console.log('새로운 데이터를 데이터베이스에 추가했습니다.');
+                conn.query('SELECT * FROM ts_work_new WHERE CUNT > ? ORDER BY COPINO_TIME DESC;', [], (error, sortedResults) => {
+                    if (error) {
+                        console.error('데이터베이스 조회 오류:', error);
+                        conn.end();
+                        return;
+                    }
+                    io.emit('updateData', sortedResults);
+                    conn.end();
+                });
             });
         });
     });
 
     socket.on('addData', (newData) => {
-        queryWithReconnect(dbConfig1, 'INSERT INTO ts_work_old SET ?', newData, (error, results) => {
-            if (error) {
-                console.error('데이터베이스 쿼리 오류:', error);
-                io.emit('errorResponse', '데이터 추가 중 오류 발생');
+        const conn = createConnection(dbConfig1);
+        conn.connect((err) => {
+            if (err) {
+                console.error('데이터베이스 연결 오류:', err);
+                io.emit('errorResponse', '데이터베이스 연결 중 오류 발생');
                 return;
             }
-            console.log('새로운 데이터를 데이터베이스에 추가했습니다.');
-            queryWithReconnect(dbConfig1, 'SELECT * FROM ts_work_old WHERE CUNT > ? ORDER BY COPINO_TIME DESC;', [], (error, sortedResults) => {
+            conn.query('INSERT INTO ts_work_old SET ?', newData, (error, results) => {
                 if (error) {
-                    console.error('데이터베이스 조회 오류:', error);
+                    console.error('데이터베이스 쿼리 오류:', error);
+                    io.emit('errorResponse', '데이터 추가 중 오류 발생');
+                    conn.end();
                     return;
                 }
-                io.emit('updateData', sortedResults);
+                console.log('새로운 데이터를 데이터베이스에 추가했습니다.');
+                conn.query('SELECT * FROM ts_work_old WHERE CUNT > ? ORDER BY COPINO_TIME DESC;', [], (error, sortedResults) => {
+                    if (error) {
+                        console.error('데이터베이스 조회 오류:', error);
+                        conn.end();
+                        return;
+                    }
+                    io.emit('updateData', sortedResults);
+                    conn.end();
+                });
             });
         });
     });
