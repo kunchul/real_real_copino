@@ -11,7 +11,6 @@ let lastDataSnapshot = [];
 const bcrypt = require('bcryptjs');
 const session = require('express-session');
 const moment = require('moment');
-const port = 3000;
 const iconv = require('iconv-lite');
 const cron = require('node-cron');
 const { exec } = require('child_process');
@@ -44,9 +43,10 @@ app.get('/keep-session-alive', (req, res) => {
 app.use(bodyParser.urlencoded({ extended: false }));
 app.use(bodyParser.json());
 
-cron.schedule('0 6 * * *', () => {
+// 서버 시작 시 cron 스케줄러 초기화
+cron.schedule('0 6 * * *', () => { // 매일 오전 6시에 실행
     console.log('Scheduled restart at 06:00 AM');
-    exec('pm2 restart all', (err, stdout, stderr) => {
+    exec('pm2 restart joweb', (err, stdout, stderr) => { // 'joweb'은 pm2로 실행한 서버 이름
         if (err) {
             console.error(`Error restarting server: ${err}`);
             return;
@@ -82,7 +82,6 @@ const dbConfig2 = {
 
 let connection;
 let connection2;
-
 function handleDisconnect(dbConfig, connectionName) {
     let conn = mysql.createConnection(dbConfig);
 
@@ -104,8 +103,15 @@ function handleDisconnect(dbConfig, connectionName) {
 
     return conn;
 }
+
 connection = handleDisconnect(dbConfig1, 'database 1');
 connection2 = handleDisconnect(dbConfig2, 'database 2');
+
+// 1시간마다 재접속 시도
+cron.schedule('0 * * * *', () => {
+    console.log('Attempting to reconnect to database 2 every hour');
+    connection2 = handleDisconnect(dbConfig2, 'database 2');
+});
 
 function queryWithReconnect(conn, dbConfig, connectionName, query, params, callback) {
     if (!conn._connectCalled) {
