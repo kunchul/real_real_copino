@@ -82,7 +82,18 @@ const dbConfig2 = {
 
 let connection;
 let connection2;
+
 function handleDisconnect(dbConfig, connectionName) {
+    if (connection2) {
+        connection2.end((err) => {
+            if (err) {
+                console.error(`Error ending the connection to ${connectionName}:`, err);
+            } else {
+                console.log(`Connection to ${connectionName} closed.`);
+            }
+        });
+    }
+
     let conn = mysql.createConnection(dbConfig);
 
     conn.connect((err) => {
@@ -110,7 +121,18 @@ connection2 = handleDisconnect(dbConfig2, 'database 2');
 // 1시간마다 재접속 시도
 cron.schedule('0 * * * *', () => {
     console.log('Attempting to reconnect to database 2 every hour');
-    connection2 = handleDisconnect(dbConfig2, 'database 2');
+    if (connection2) {
+        connection2.end((err) => {
+            if (err) {
+                console.error('Error ending the connection to database 2:', err);
+            } else {
+                console.log('Connection to database 2 closed for hourly reconnection.');
+                connection2 = handleDisconnect(dbConfig2, 'database 2');
+            }
+        });
+    } else {
+        connection2 = handleDisconnect(dbConfig2, 'database 2');
+    }
 });
 
 function queryWithReconnect(conn, dbConfig, connectionName, query, params, callback) {
