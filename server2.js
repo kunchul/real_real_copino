@@ -585,93 +585,120 @@ app.post('/insert-order', (req, res) => {
 
     const userQuery = 'SELECT CAR FROM user WHERE id = ?';
 
-    queryWithReconnect(dbConfig1, userQuery, [userId], (userError, userResults) => {
-        if (userError) {
-            return res.status(500).json({ error: 'User query error' });
+    const conn1 = createConnection(dbConfig1);
+    conn1.connect((err) => {
+        if (err) {
+            console.error('데이터베이스 연결 오류:', err);
+            return res.status(500).json({ error: 'Database connection error' });
         }
 
-        if (userResults.length === 0) {
-            return res.status(404).json({ error: 'User not found' });
-        }
-
-        const CAR_NO = userResults[0].CAR;
-
-        queryWithReconnect(dbConfig2, "SET NAMES 'utf8mb4'", [], (err) => {
-            if (err) {
-                return res.status(500).json({ error: 'Error setting names' });
+        conn1.query(userQuery, [userId], (userError, userResults) => {
+            if (userError) {
+                conn1.end();
+                return res.status(500).json({ error: 'User query error' });
             }
 
-            const selectWorkQuery = `
-                SELECT W.W_IDX, CONVERT(CAST(W.DIV_LOC AS BINARY) USING utf8mb4) AS DIV_LOC, W.CON_TYPE, W.CON_NO, W.W_DATE_CYIN,
-                       CONCAT(Y.Y_LOC_Y, '-', Y.Y_LOC) AS LOC
-                FROM T_WORK W
-                LEFT JOIN T_YARD_INV Y ON W.W_IDX = Y.W_IDX
-                WHERE W.CON_NO = ?
-                ORDER BY W.W_DATE_CYIN DESC
-                LIMIT 1
-            `;
+            if (userResults.length === 0) {
+                conn1.end();
+                return res.status(404).json({ error: 'User not found' });
+            }
 
-            queryWithReconnect(dbConfig2, selectWorkQuery, [CON_NO], (selectError, selectResults) => {
-                if (selectError) {
-                    return res.status(500).json({ error: 'Database query error' });
+            const CAR_NO = userResults[0].CAR;
+            conn1.end();
+
+            const conn2 = createConnection(dbConfig2);
+            conn2.connect((err) => {
+                if (err) {
+                    console.error('데이터베이스 연결 오류:', err);
+                    return res.status(500).json({ error: 'Database connection error' });
                 }
 
-                if (selectResults.length === 0) {
-                    return res.status(404).json({ error: 'No matching work found' });
-                }
-
-                let { W_IDX, DIV_LOC, CON_TYPE, CON_NO, LOC } = selectResults[0];
-
-                const checkOrderQuery = `
-                    SELECT O_IDX
-                    FROM T_WORK_ORDER
-                    WHERE W_IDX = ? AND O_DONE = 'N' AND O_DEL = 'N'
-                `;
-
-                queryWithReconnect(dbConfig2, checkOrderQuery, [W_IDX], (checkError, checkResults) => {
-                    if (checkError) {
-                        return res.status(500).json({ error: 'Check query error' });
+                conn2.query("SET NAMES 'utf8mb4'", [], (err) => {
+                    if (err) {
+                        conn2.end();
+                        return res.status(500).json({ error: 'Error setting names' });
                     }
 
-                    if (checkResults.length > 0) {
-                        return res.status(200).json({ status: 'exists', message: '이미 접수된 컨테이너 번호입니다.' });
-                    } else {
-                        const O_IO = '상차';
-                        const O_MEMO = '홈페이지 접수';
-                        const O_DATE_ORDER = moment().format('YYYY-MM-DD');
-                        const DATE_INS = moment().format('YYYY-MM-DD HH:mm:ss');
+                    const selectWorkQuery = `
+                        SELECT W.W_IDX, CONVERT(CAST(W.DIV_LOC AS BINARY) USING utf8mb4) AS DIV_LOC, W.CON_TYPE, W.CON_NO, W.W_DATE_CYIN,
+                               CONCAT(Y.Y_LOC_Y, '-', Y.Y_LOC) AS LOC
+                        FROM T_WORK W
+                        LEFT JOIN T_YARD_INV Y ON W.W_IDX = Y.W_IDX
+                        WHERE W.CON_NO = ?
+                        ORDER BY W.W_DATE_CYIN DESC
+                        LIMIT 1
+                    `;
 
-                        const insertValues = [DIV_LOC, O_DATE_ORDER, CAR_NO, CON_TYPE, O_IO, W_IDX, O_MEMO, DATE_INS];
+                    conn2.query(selectWorkQuery, [CON_NO], (selectError, selectResults) => {
+                        if (selectError) {
+                            conn2.end();
+                            return res.status(500).json({ error: 'Database query error' });
+                        }
 
-                        const insertQuery = `
-                            INSERT INTO T_WORK_ORDER
-                            (DIV_LOC, O_DATE_ORDER, CAR_NO, CON_KU, O_IO, W_IDX, O_MEMO, DATE_INS)
-                            VALUES (?, ?, ?, ?, ?, ?, ?, ?);
+                        if (selectResults.length === 0) {
+                            conn2.end();
+                            return res.status(404).json({ error: 'No matching work found' });
+                        }
+
+                        let { W_IDX, DIV_LOC, CON_TYPE, CON_NO, LOC } = selectResults[0];
+
+                        const checkOrderQuery = `
+                            SELECT O_IDX
+                            FROM T_WORK_ORDER
+                            WHERE W_IDX = ? AND O_DONE = 'N' AND O_DEL = 'N'
                         `;
 
-                        queryWithReconnect(dbConfig2, insertQuery, insertValues, (insertError) => {
-                            if (insertError) {
-                                return res.status(500).json({ error: 'Insert query error' });
+                        conn2.query(checkOrderQuery, [W_IDX], (checkError, checkResults) => {
+                            if (checkError) {
+                                conn2.end();
+                                return res.status(500).json({ error: 'Check query error' });
                             }
 
-                            if (O_IO === '상차' && W_IDX > 0) {
-                                const updateSeqQuery = `
-                                    UPDATE T_WORK_SEQ
-                                    SET S_DONE = 'Y'
-                                    WHERE W_IDX = ?
+                            if (checkResults.length > 0) {
+                                conn2.end();
+                                return res.status(200).json({ status: 'exists', message: '이미 접수된 컨테이너 번호입니다.' });
+                            } else {
+                                const O_IO = '상차';
+                                const O_MEMO = '홈페이지 접수';
+                                const O_DATE_ORDER = moment().format('YYYY-MM-DD');
+                                const DATE_INS = moment().format('YYYY-MM-DD HH:mm:ss');
+
+                                const insertValues = [DIV_LOC, O_DATE_ORDER, CAR_NO, CON_TYPE, O_IO, W_IDX, O_MEMO, DATE_INS];
+
+                                const insertQuery = `
+                                    INSERT INTO T_WORK_ORDER
+                                    (DIV_LOC, O_DATE_ORDER, CAR_NO, CON_KU, O_IO, W_IDX, O_MEMO, DATE_INS)
+                                    VALUES (?, ?, ?, ?, ?, ?, ?, ?);
                                 `;
 
-                                queryWithReconnect(dbConfig2, updateSeqQuery, [W_IDX], (updateError) => {
-                                    if (updateError) {
-                                        return res.status(500).json({ error: 'Update query error' });
+                                conn2.query(insertQuery, insertValues, (insertError) => {
+                                    if (insertError) {
+                                        conn2.end();
+                                        return res.status(500).json({ error: 'Insert query error' });
                                     }
-                                    res.json({ message: '등록완료', CON_NO, LOC });
+
+                                    if (O_IO === '상차' && W_IDX > 0) {
+                                        const updateSeqQuery = `
+                                            UPDATE T_WORK_SEQ
+                                            SET S_DONE = 'Y'
+                                            WHERE W_IDX = ?
+                                        `;
+
+                                        conn2.query(updateSeqQuery, [W_IDX], (updateError) => {
+                                            conn2.end();
+                                            if (updateError) {
+                                                return res.status(500).json({ error: 'Update query error' });
+                                            }
+                                            res.json({ message: '등록완료', CON_NO, LOC });
+                                        });
+                                    } else {
+                                        conn2.end();
+                                        res.json({ message: '등록완료', CON_NO, LOC });
+                                    }
                                 });
-                            } else {
-                                res.json({ message: '등록완료', CON_NO, LOC });
                             }
                         });
-                    }
+                    });
                 });
             });
         });
@@ -714,112 +741,141 @@ app.post('/insert-onorder', (req, res) => {
 
     const useronQuery = 'SELECT CAR FROM user WHERE id = ?';
 
-    queryWithReconnect(dbConfig1, useronQuery, [userId], (userError, userResults) => {
-        if (userError) {
-            return res.status(500).json({ error: 'User query error' });
+    const conn1 = createConnection(dbConfig1);
+    conn1.connect((err) => {
+        if (err) {
+            console.error('데이터베이스 연결 오류:', err);
+            return res.status(500).json({ error: 'Database connection error' });
         }
 
-        if (userResults.length === 0) {
-            return res.status(404).json({ error: 'User not found' });
-        }
-
-        const CAR_NO = userResults[0].CAR;
-
-        queryWithReconnect(dbConfig2, "SET NAMES 'utf8mb4'", [], (err) => {
-            if (err) {
-                return res.status(500).json({ error: 'Error setting names' });
+        conn1.query(useronQuery, [userId], (userError, userResults) => {
+            if (userError) {
+                conn1.end();
+                return res.status(500).json({ error: 'User query error' });
             }
 
-            const selectSeqQuery = `
-                SELECT S_NO, W_IDX
-                FROM t_work_seq
-                WHERE S_NO = ? AND S_DONE = 'N'
-                ORDER BY S_NO
-                LIMIT 1
-            `;
+            if (userResults.length === 0) {
+                conn1.end();
+                return res.status(404).json({ error: 'User not found' });
+            }
 
-            queryWithReconnect(dbConfig2, selectSeqQuery, [S_NO], (seqError, seqResults) => {
-                if (seqError) {
-                    return res.status(500).json({ error: 'Database query error' });
+            const CAR_NO = userResults[0].CAR;
+            conn1.end();
+
+            const conn2 = createConnection(dbConfig2);
+            conn2.connect((err) => {
+                if (err) {
+                    console.error('데이터베이스 연결 오류:', err);
+                    return res.status(500).json({ error: 'Database connection error' });
                 }
 
-                if (seqResults.length === 0) {
-                    return res.status(404).json({ error: 'No matching sequence found' });
-                }
-
-                const { W_IDX } = seqResults[0];
-
-                const selectWorkonQuery = `
-                    SELECT A.W_IDX, CONVERT(CAST(A.DIV_LOC AS BINARY) USING utf8mb4) AS DIV_LOC, A.CON_TYPE, A.CON_NO, A.W_DATE_CYIN,
-                           CONCAT(B.Y_LOC_Y, '-', B.Y_LOC) AS LOC
-                    FROM T_WORK A
-                    LEFT JOIN T_YARD_INV B ON A.W_IDX = B.W_IDX
-                    WHERE A.W_IDX = ?
-                    ORDER BY A.W_DATE_CYIN DESC
-                    LIMIT 1
-                `;
-
-                queryWithReconnect(dbConfig2, selectWorkonQuery, [W_IDX], (selectError, selectResults) => {
-                    if (selectError) {
-                        return res.status(500).json({ error: 'Database query error' });
+                conn2.query("SET NAMES 'utf8mb4'", [], (err) => {
+                    if (err) {
+                        conn2.end();
+                        return res.status(500).json({ error: 'Error setting names' });
                     }
 
-                    if (selectResults.length === 0) {
-                        return res.status(404).json({ error: 'No matching work found' });
-                    }
-
-                    let { W_IDX, DIV_LOC, CON_TYPE, CON_NO, LOC } = selectResults[0];
-
-                    const checkOrderQuery = `
-                        SELECT O_IDX
-                        FROM T_WORK_ORDER
-                        WHERE W_IDX = ? AND O_DONE = 'N' AND O_DEL = 'N'
+                    const selectSeqQuery = `
+                        SELECT S_NO, W_IDX
+                        FROM t_work_seq
+                        WHERE S_NO = ? AND S_DONE = 'N'
+                        ORDER BY S_NO
+                        LIMIT 1
                     `;
 
-                    queryWithReconnect(dbConfig2, checkOrderQuery, [W_IDX], (checkError, checkResults) => {
-                        if (checkError) {
-                            return res.status(500).json({ error: 'Check query error' });
+                    conn2.query(selectSeqQuery, [S_NO], (seqError, seqResults) => {
+                        if (seqError) {
+                            conn2.end();
+                            return res.status(500).json({ error: 'Database query error' });
                         }
 
-                        if (checkResults.length > 0) {
-                            return res.status(200).json({ status: 'exists', message: '이미 접수된 컨테이너 번호입니다.' });
-                        } else {
-                            const O_IO = '상차';
-                            const O_MEMO = '홈페이지 접수';
-                            const O_DATE_ORDER = moment().format('YYYY-MM-DD');
-                            const DATE_INS = moment().format('YYYY-MM-DD HH:mm:ss');
+                        if (seqResults.length === 0) {
+                            conn2.end();
+                            return res.status(404).json({ error: 'No matching sequence found' });
+                        }
 
-                            const insertValues = [DIV_LOC, O_DATE_ORDER, CAR_NO, CON_TYPE, O_IO, W_IDX, O_MEMO, DATE_INS];
+                        const { W_IDX } = seqResults[0];
 
-                            const insertQuery = `
-                                INSERT INTO T_WORK_ORDER
-                                (DIV_LOC, O_DATE_ORDER, CAR_NO, CON_KU, O_IO, W_IDX, O_MEMO, DATE_INS)
-                                VALUES (?, ?, ?, ?, ?, ?, ?, ?);
+                        const selectWorkonQuery = `
+                            SELECT A.W_IDX, CONVERT(CAST(A.DIV_LOC AS BINARY) USING utf8mb4) AS DIV_LOC, A.CON_TYPE, A.CON_NO, A.W_DATE_CYIN,
+                                   CONCAT(B.Y_LOC_Y, '-', B.Y_LOC) AS LOC
+                            FROM T_WORK A
+                            LEFT JOIN T_YARD_INV B ON A.W_IDX = B.W_IDX
+                            WHERE A.W_IDX = ?
+                            ORDER BY A.W_DATE_CYIN DESC
+                            LIMIT 1
+                        `;
+
+                        conn2.query(selectWorkonQuery, [W_IDX], (selectError, selectResults) => {
+                            if (selectError) {
+                                conn2.end();
+                                return res.status(500).json({ error: 'Database query error' });
+                            }
+
+                            if (selectResults.length === 0) {
+                                conn2.end();
+                                return res.status(404).json({ error: 'No matching work found' });
+                            }
+
+                            let { W_IDX, DIV_LOC, CON_TYPE, CON_NO, LOC } = selectResults[0];
+
+                            const checkOrderQuery = `
+                                SELECT O_IDX
+                                FROM T_WORK_ORDER
+                                WHERE W_IDX = ? AND O_DONE = 'N' AND O_DEL = 'N'
                             `;
 
-                            queryWithReconnect(dbConfig2, insertQuery, insertValues, (insertError) => {
-                                if (insertError) {
-                                    return res.status(500).json({ error: 'Insert query error' });
+                            conn2.query(checkOrderQuery, [W_IDX], (checkError, checkResults) => {
+                                if (checkError) {
+                                    conn2.end();
+                                    return res.status(500).json({ error: 'Check query error' });
                                 }
 
-                                if (O_IO === '상차' && W_IDX > 0) {
-                                    const updateSeqQuery = `
-                                        UPDATE T_WORK_SEQ
-                                        SET S_DONE = 'Y'
-                                        WHERE W_IDX = ?
+                                if (checkResults.length > 0) {
+                                    conn2.end();
+                                    return res.status(200).json({ status: 'exists', message: '이미 접수된 컨테이너 번호입니다.' });
+                                } else {
+                                    const O_IO = '상차';
+                                    const O_MEMO = '홈페이지 접수';
+                                    const O_DATE_ORDER = moment().format('YYYY-MM-DD');
+                                    const DATE_INS = moment().format('YYYY-MM-DD HH:mm:ss');
+
+                                    const insertValues = [DIV_LOC, O_DATE_ORDER, CAR_NO, CON_TYPE, O_IO, W_IDX, O_MEMO, DATE_INS];
+
+                                    const insertQuery = `
+                                        INSERT INTO T_WORK_ORDER
+                                        (DIV_LOC, O_DATE_ORDER, CAR_NO, CON_KU, O_IO, W_IDX, O_MEMO, DATE_INS)
+                                        VALUES (?, ?, ?, ?, ?, ?, ?, ?);
                                     `;
 
-                                    queryWithReconnect(dbConfig2, updateSeqQuery, [W_IDX], (updateError) => {
-                                        if (updateError) {
-                                            return res.status(500).json({ error: 'Update query error' });
+                                    conn2.query(insertQuery, insertValues, (insertError) => {
+                                        if (insertError) {
+                                            conn2.end();
+                                            return res.status(500).json({ error: 'Insert query error' });
                                         }
-                                        res.json({ message: '등록완료', CON_NO, LOC });
+
+                                        if (O_IO === '상차' && W_IDX > 0) {
+                                            const updateSeqQuery = `
+                                                UPDATE T_WORK_SEQ
+                                                SET S_DONE = 'Y'
+                                                WHERE W_IDX = ?
+                                            `;
+
+                                            conn2.query(updateSeqQuery, [W_IDX], (updateError) => {
+                                                conn2.end();
+                                                if (updateError) {
+                                                    return res.status(500).json({ error: 'Update query error' });
+                                                }
+                                                res.json({ message: '등록완료', CON_NO, LOC });
+                                            });
+                                        } else {
+                                            conn2.end();
+                                            res.json({ message: '등록완료', CON_NO, LOC });
+                                        }
                                     });
-                                } else {
-                                    res.json({ message: '등록완료', CON_NO, LOC });
                                 }
                             });
-                        }
+                        });
                     });
                 });
             });
@@ -833,41 +889,52 @@ app.post('/search-container-unload', (req, res) => {
     const { containerNumber, divLoc } = req.body;
     const trimmedContainerNumber = containerNumber.slice(-7);
 
-    queryWithReconnect(dbConfig2, "SET NAMES 'utf8mb4'", [], (err) => {
+    const conn = createConnection(dbConfig2);
+    conn.connect((err) => {
         if (err) {
-            return res.status(500).json({ error: 'Error setting names' });
+            console.error('데이터베이스 연결 오류:', err);
+            return res.status(500).json({ error: 'Database connection error' });
         }
 
-        const selectQuery = `
-            SELECT B.CON_NO, B.W_IDX, B.W_LOC_WISH AS WISH, CONVERT(CAST(B.DIV_LOC AS BINARY) USING utf8mb4) AS DIV_LOC
-            FROM T_WORK B
-            WHERE RIGHT(B.CON_NO, 7) = ?
-              AND CONVERT(CAST(B.DIV_LOC AS BINARY) USING utf8mb4) = ?
-              AND B.W_DONE_CY = 'N'
-              AND B.W_DEL = 'N'
-              AND NOT EXISTS (
-                  SELECT 1
-                  FROM T_YARD_INV Y
-                  LEFT JOIN T_WORK A ON A.W_IDX = Y.W_IDX
-                  WHERE RIGHT(A.CON_NO, 7) = ?
-                    AND A.W_DONE_CY = 'N'
-                    AND A.W_DEL = 'N'
-                    AND A.W_IDX = B.W_IDX
-              )
-        `;
-
-        const queryValues = [trimmedContainerNumber, divLoc, trimmedContainerNumber];
-
-        queryWithReconnect(dbConfig2, selectQuery, queryValues, (error, results) => {
-            if (error) {
-                return res.status(500).json({ error: 'Database query error' });
+        conn.query("SET NAMES 'utf8mb4'", [], (err) => {
+            if (err) {
+                conn.end();
+                return res.status(500).json({ error: 'Error setting names' });
             }
 
-            if (results.length > 0) {
-                res.json(results[0]);
-            } else {
-                res.json({ message: '등록된 컨테이너 없음.(사무실 문의)' });
-            }
+            const selectQuery = `
+                SELECT B.CON_NO, B.W_IDX, B.W_LOC_WISH AS WISH, CONVERT(CAST(B.DIV_LOC AS BINARY) USING utf8mb4) AS DIV_LOC
+                FROM T_WORK B
+                WHERE RIGHT(B.CON_NO, 7) = ?
+                  AND CONVERT(CAST(B.DIV_LOC AS BINARY) USING utf8mb4) = ?
+                  AND B.W_DONE_CY = 'N'
+                  AND B.W_DEL = 'N'
+                  AND NOT EXISTS (
+                      SELECT 1
+                      FROM T_YARD_INV Y
+                      LEFT JOIN T_WORK A ON A.W_IDX = Y.W_IDX
+                      WHERE RIGHT(A.CON_NO, 7) = ?
+                        AND A.W_DONE_CY = 'N'
+                        AND A.W_DEL = 'N'
+                        AND A.W_IDX = B.W_IDX
+                  )
+            `;
+
+            const queryValues = [trimmedContainerNumber, divLoc, trimmedContainerNumber];
+
+            conn.query(selectQuery, queryValues, (error, results) => {
+                conn.end();
+                if (error) {
+                    console.error('Database query error:', error);
+                    return res.status(500).json({ error: 'Database query error' });
+                }
+
+                if (results.length > 0) {
+                    res.json(results[0]);
+                } else {
+                    res.json({ message: '등록된 컨테이너 없음.(사무실 문의)' });
+                }
+            });
         });
     });
 });
@@ -882,75 +949,100 @@ app.post('/insert-unload-order', (req, res) => {
 
     const userQuery = 'SELECT CAR FROM user WHERE id = ?';
 
-    queryWithReconnect(dbConfig1, userQuery, [userId], (userError, userResults) => {
-        if (userError) {
-            return res.status(500).json({ error: 'User query error' });
+    const conn1 = createConnection(dbConfig1);
+    conn1.connect((err) => {
+        if (err) {
+            console.error('데이터베이스 연결 오류:', err);
+            return res.status(500).json({ error: 'Database connection error' });
         }
 
-        if (userResults.length === 0) {
-            return res.status(404).json({ error: 'User not found' });
-        }
-
-        const CAR_NO = userResults[0].CAR;
-
-        queryWithReconnect(dbConfig2, "SET NAMES 'utf8mb4'", [], (err) => {
-            if (err) {
-                return res.status(500).json({ error: 'Error setting names' });
+        conn1.query(userQuery, [userId], (userError, userResults) => {
+            if (userError) {
+                conn1.end();
+                return res.status(500).json({ error: 'User query error' });
             }
 
-            const selectWorkQuery = `
-                SELECT W.W_IDX, CONVERT(CAST(W.DIV_LOC AS BINARY) USING utf8mb4) AS DIV_LOC, W.CON_TYPE, W.CON_NO, W.W_LOC_WISH AS WISH
-                FROM T_WORK W
-                WHERE W.W_IDX = ? AND W.W_DONE_CY = 'N' AND W.W_DEL = 'N'
-                LIMIT 1
-            `;
+            if (userResults.length === 0) {
+                conn1.end();
+                return res.status(404).json({ error: 'User not found' });
+            }
 
-            queryWithReconnect(dbConfig2, selectWorkQuery, [W_IDX], (selectError, selectResults) => {
-                if (selectError) {
-                    return res.status(500).json({ error: 'Database query error' });
+            const CAR_NO = userResults[0].CAR;
+            conn1.end();
+
+            const conn2 = createConnection(dbConfig2);
+            conn2.connect((err) => {
+                if (err) {
+                    console.error('데이터베이스 연결 오류:', err);
+                    return res.status(500).json({ error: 'Database connection error' });
                 }
 
-                if (selectResults.length === 0) {
-                    return res.status(404).json({ error: 'No matching work found' });
-                }
-
-                let { W_IDX, DIV_LOC, CON_TYPE, CON_NO, WISH } = selectResults[0];
-
-                const checkOrderQuery = `
-                    SELECT O_IDX
-                    FROM T_WORK_ORDER
-                    WHERE W_IDX = ? AND O_DONE = 'N' AND O_DEL = 'N'
-                `;
-
-                queryWithReconnect(dbConfig2, checkOrderQuery, [W_IDX], (checkError, checkResults) => {
-                    if (checkError) {
-                        return res.status(500).json({ error: 'Check query error' });
+                conn2.query("SET NAMES 'utf8mb4'", [], (err) => {
+                    if (err) {
+                        conn2.end();
+                        return res.status(500).json({ error: 'Error setting names' });
                     }
 
-                    if (checkResults.length > 0) {
-                        return res.status(200).json({ status: 'exists', message: '이미 접수된 컨테이너 번호입니다.' });
-                    } else {
-                        const O_IO = '하차';
-                        const O_MEMO = '홈페이지 접수';
-                        const O_DATE_ORDER = moment().format('YYYY-MM-DD');
-                        const DATE_INS = moment().format('YYYY-MM-DD HH:mm:ss');
+                    const selectWorkQuery = `
+                        SELECT W.W_IDX, CONVERT(CAST(W.DIV_LOC AS BINARY) USING utf8mb4) AS DIV_LOC, W.CON_TYPE, W.CON_NO, W.W_LOC_WISH AS WISH
+                        FROM T_WORK W
+                        WHERE W.W_IDX = ? AND W.W_DONE_CY = 'N' AND W.W_DEL = 'N'
+                        LIMIT 1
+                    `;
 
-                        const insertValues = [DIV_LOC, O_DATE_ORDER, CAR_NO, CON_TYPE, O_IO, W_IDX, O_MEMO, DATE_INS, WISH];
+                    conn2.query(selectWorkQuery, [W_IDX], (selectError, selectResults) => {
+                        if (selectError) {
+                            conn2.end();
+                            return res.status(500).json({ error: 'Database query error' });
+                        }
 
-                        const insertQuery = `
-                            INSERT INTO T_WORK_ORDER
-                            (DIV_LOC, O_DATE_ORDER, CAR_NO, CON_KU, O_IO, W_IDX, O_MEMO, DATE_INS, O_LOC_WISH)
-                            VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?);
+                        if (selectResults.length === 0) {
+                            conn2.end();
+                            return res.status(404).json({ error: 'No matching work found' });
+                        }
+
+                        let { W_IDX, DIV_LOC, CON_TYPE, CON_NO, WISH } = selectResults[0];
+
+                        const checkOrderQuery = `
+                            SELECT O_IDX
+                            FROM T_WORK_ORDER
+                            WHERE W_IDX = ? AND O_DONE = 'N' AND O_DEL = 'N'
                         `;
 
-                        queryWithReconnect(dbConfig2, insertQuery, insertValues, (insertError) => {
-                            if (insertError) {
-                                return res.status(500).json({ error: 'Insert query error' });
+                        conn2.query(checkOrderQuery, [W_IDX], (checkError, checkResults) => {
+                            if (checkError) {
+                                conn2.end();
+                                return res.status(500).json({ error: 'Check query error' });
                             }
 
-                            res.json({ message: '등록완료', CON_NO, LOC: DIV_LOC });
+                            if (checkResults.length > 0) {
+                                conn2.end();
+                                return res.status(200).json({ status: 'exists', message: '이미 접수된 컨테이너 번호입니다.' });
+                            } else {
+                                const O_IO = '하차';
+                                const O_MEMO = '홈페이지 접수';
+                                const O_DATE_ORDER = moment().format('YYYY-MM-DD');
+                                const DATE_INS = moment().format('YYYY-MM-DD HH:mm:ss');
+
+                                const insertValues = [DIV_LOC, O_DATE_ORDER, CAR_NO, CON_TYPE, O_IO, W_IDX, O_MEMO, DATE_INS, WISH];
+
+                                const insertQuery = `
+                                    INSERT INTO T_WORK_ORDER
+                                    (DIV_LOC, O_DATE_ORDER, CAR_NO, CON_KU, O_IO, W_IDX, O_MEMO, DATE_INS, O_LOC_WISH)
+                                    VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?);
+                                `;
+
+                                conn2.query(insertQuery, insertValues, (insertError) => {
+                                    conn2.end();
+                                    if (insertError) {
+                                        return res.status(500).json({ error: 'Insert query error' });
+                                    }
+
+                                    res.json({ message: '등록완료', CON_NO, LOC: DIV_LOC });
+                                });
+                            }
                         });
-                    }
+                    });
                 });
             });
         });
