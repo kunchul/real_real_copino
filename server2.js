@@ -109,9 +109,8 @@ connection = handleDisconnect(dbConfig1, 'database 1');
 connection2 = handleDisconnect(dbConfig2, 'database 2');
 
 // 1시간마다 재접속 시도
-// 5초마다 재접속 시도
-setInterval(() => {
-    console.log('Attempting to reconnect to database 2 every 5 seconds');
+cron.schedule('0 * * * *', () => {
+    console.log('Attempting to reconnect to database 2 every hour');
     connection2.end((err) => {
         if (err) {
             console.error('Error ending the connection to database 2:', err);
@@ -119,7 +118,7 @@ setInterval(() => {
             connection2 = handleDisconnect(dbConfig2, 'database 2');
         }
     });
-}, 5000);
+});
 
 function queryWithReconnect(conn, dbConfig, connectionName, query, params, callback) {
     if (!conn._connectCalled) {
