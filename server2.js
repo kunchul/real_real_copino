@@ -597,7 +597,7 @@ setInterval(() => {
 // 회원 가입 함수
 function registerUser(name, id, password, phone, car) {
     const sql = `INSERT INTO user (name, id, password, phone, car) VALUES (?, ?, ?, ?, ?)`;
-    queryWithReconnect(sql, [name, id, password, phone, car], (error, result) => {
+    queryWithReconnect(connection, dbConfig1, 'database 1', sql, [name, id, password, phone, car], (error, result) => {
         if (error) throw error;
         console.log("사용자 정보가 성공적으로 삽입되었습니다.");
     });
