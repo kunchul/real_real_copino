@@ -15,9 +15,6 @@ const iconv = require('iconv-lite');
 const cron = require('node-cron');
 const { exec } = require('child_process');
 
-
-
-
 // 어제와 오늘 날짜를 계산
 const yesterday = moment().subtract(1, 'days').format('YYYY-MM-DD');
 const today = moment().format('YYYY-MM-DD');
@@ -56,11 +53,8 @@ cron.schedule('0 6 * * *', () => { // 매일 오전 6시에 실행
     });
 });
 
-
 // 환경 변수에서 포트 번호를 읽어오도록 설정
 const PORT = process.env.PORT || 31681;
-
-
 
 // 연결 설정
 const dbConfig1 = {
@@ -80,79 +74,29 @@ const dbConfig2 = {
     charset: 'utf8'
 };
 
-let connection;
-let connection2;
+function createConnection(dbConfig) {
+    return mysql.createConnection(dbConfig);
+}
 
-function handleDisconnect(dbConfig, connectionName) {
-    let conn = mysql.createConnection(dbConfig);
-
+function queryWithReconnect(dbConfig, query, params, callback) {
+    const conn = createConnection(dbConfig);
     conn.connect((err) => {
         if (err) {
-            console.error(`Error connecting to ${connectionName}:`, err);
-            setTimeout(() => handleDisconnect(dbConfig, connectionName), 2000);
-        } else {
-            console.log(`Connected to ${connectionName}.`);
+            console.error(`Error connecting to database:`, err);
+            callback(err, null, null);
+            conn.end();
+            return;
         }
-    });
-
-    conn.on('error', (err) => {
-        console.error(`Database error on ${connectionName}:`, err);
-        if (err.code === 'PROTOCOL_CONNECTION_LOST' || err.fatal) {
-            handleDisconnect(dbConfig, connectionName);
-        }
-    });
-
-    return conn;
-}
-
-connection = handleDisconnect(dbConfig1, 'database 1');
-connection2 = handleDisconnect(dbConfig2, 'database 2');
-
-// 1시간마다 재접속 시도
-cron.schedule('0 * * * *', () => {
-    console.log('Attempting to reconnect to database 2 every hour');
-    connection2.end((err) => {
-        if (err) {
-            console.error('Error ending the connection to database 2:', err);
-        } else {
-            connection2 = handleDisconnect(dbConfig2, 'database 2');
-        }
-    });
-});
-
-function queryWithReconnect(conn, dbConfig, connectionName, query, params, callback) {
-    if (!conn._connectCalled) {
-        conn = handleDisconnect(dbConfig, connectionName);
-    }
-
-    conn.query(query, params, (error, results, fields) => {
-        if (error) {
-            console.error(`Query error on ${connectionName}:`, error);
-            if (error.fatal) {
-                conn = handleDisconnect(dbConfig, connectionName);
-                return queryWithReconnect(conn, dbConfig, connectionName, query, params, callback);
+        conn.query(query, params, (error, results, fields) => {
+            if (error) {
+                console.error(`Query error on database:`, error);
+                callback(error, results, fields);
+                conn.end();
+                return;
             }
-            return callback(error, results, fields);
-        }
-        callback(null, results, fields);
-    });
-}
-
-function queryWithReconnect2(conn, dbConfig, connectionName, query, params, callback) {
-    if (!conn._connectCalled) {
-        conn = handleDisconnect(dbConfig, connectionName);
-    }
-
-    conn.query(query, params, (error, results, fields) => {
-        if (error) {
-            console.error(`Query error on ${connectionName}:`, error);
-            if (error.fatal) {
-                conn = handleDisconnect(dbConfig, connectionName);
-                return queryWithReconnect2(conn, dbConfig, connectionName, query, params, callback);
-            }
-            return callback(error, results, fields);
-        }
-        callback(null, results, fields);
+            callback(null, results, fields);
+            conn.end();
+        });
     });
 }
 
@@ -164,79 +108,41 @@ io.on('connection', (socket) => {
     });
 
     socket.on('addData', (newData) => {
-        queryWithReconnect(connection, dbConfig1, 'database 1', 'INSERT INTO ts_work_new SET ?', newData, (error, results) => {
+        queryWithReconnect(dbConfig1, 'INSERT INTO ts_work_new SET ?', newData, (error, results) => {
             if (error) {
                 console.error('데이터베이스 쿼리 오류:', error);
                 io.emit('errorResponse', '데이터 추가 중 오류 발생');
                 return;
             }
             console.log('새로운 데이터를 데이터베이스에 추가했습니다.');
-            // INSERT 성공 후 데이터를 정렬하여 다시 조회
-            queryWithReconnect(connection, dbConfig1, 'database 1', 'SELECT * FROM ts_work_new WHERE CUNT > ? ORDER BY COPINO_TIME DESC;', [], (error, sortedResults) => {
+            queryWithReconnect(dbConfig1, 'SELECT * FROM ts_work_new WHERE CUNT > ? ORDER BY COPINO_TIME DESC;', [], (error, sortedResults) => {
                 if (error) {
                     console.error('데이터베이스 조회 오류:', error);
                     return;
                 }
-                // 조회된 정렬된 데이터를 클라이언트에 전송
                 io.emit('updateData', sortedResults);
             });
         });
     });
 
     socket.on('addData', (newData) => {
-        queryWithReconnect(connection, dbConfig1, 'database 1', 'INSERT INTO ts_work_old SET ?', newData, (error, results) => {
+        queryWithReconnect(dbConfig1, 'INSERT INTO ts_work_old SET ?', newData, (error, results) => {
             if (error) {
                 console.error('데이터베이스 쿼리 오류:', error);
                 io.emit('errorResponse', '데이터 추가 중 오류 발생');
                 return;
             }
             console.log('새로운 데이터를 데이터베이스에 추가했습니다.');
-            // INSERT 성공 후 데이터를 정렬하여 다시 조회
-            queryWithReconnect(connection, dbConfig1, 'database 1', 'SELECT * FROM ts_work_old WHERE CUNT > ? ORDER BY COPINO_TIME DESC;', [], (error, sortedResults) => {
+            queryWithReconnect(dbConfig1, 'SELECT * FROM ts_work_old WHERE CUNT > ? ORDER BY COPINO_TIME DESC;', [], (error, sortedResults) => {
                 if (error) {
                     console.error('데이터베이스 조회 오류:', error);
                     return;
                 }
-                // 조회된 정렬된 데이터를 클라이언트에 전송
                 io.emit('updateData', sortedResults);
             });
-        });
-    });
-
-    socket.on('addData', (newData2) => {
-        queryWithReconnect(connection, dbConfig1, 'database 1', 'INSERT INTO ts_work_new SET ?', newData2, (error, results) => {
-            if (error) {
-                console.error('데이터베이스 쿼리 오류:', error);
-                io.emit('errorResponse', '데이터 추가 중 오류 발생');
-                return;
-            }
-            console.log('새로운 데이터를 데이터베이스에 추가했습니다.');
-            // INSERT 성공 후 데이터를 정렬하여 다시 조회
-            queryWithReconnect(connection, dbConfig1, 'database 1', 'SELECT * FROM ts_work_old WHERE CUNT > ? ORDER BY COPINO_TIME DESC;', [], (error, sortedResults) => {
-                if (error) {
-                    console.error('데이터베이스 조회 오류:', error);
-                    return;
-                }
-                // 조회된 정렬된 데이터를 클라이언트에 전송
-                io.emit('updateData', sortedResults);
-            });
-        });
-    });
-
-    socket.on('addData', (newData2) => {
-        // 새로 추가된 데이터를 데이터베이스에 추가
-        queryWithReconnect(connection, dbConfig1, 'database 1', 'INSERT INTO ts_work_old SET ?', newData2, (error, results) => {
-            if (error) {
-                console.error('데이터베이스 쿼리 오류:', error);
-                return;
-            }
-            console.log('새로운 데이터를 데이터베이스에 추가했습니다.');
-            // 추가된 데이터를 클라이언트에게 전송하여 추가 요청
-            io.emit('addData', newData2);
         });
     });
 });
-
 
 //페이지 권한
 function checkRole(allowedRoles) {
@@ -254,7 +160,6 @@ server.listen(PORT, () => {
     console.log(`서버가 *:${PORT} 포트에서 실행 중입니다.`);
 });
 
-
 // ---------------------------------------------------------------------------------------------------------------------------------------------------------------
 // 정적 파일 제공
 app.use(express.static(path.join(__dirname, 'public')));
@@ -263,8 +168,6 @@ app.use(express.static(path.join(__dirname, 'public')));
 app.get('/', function (req, res) {
     res.sendFile(path.join(__dirname, 'index.html'));
 });
-
-
 
 // 로그인 후---------------------------------------------------------------------------------------------------------------------------------------------------------------
 app.set('view engine', 'ejs');  
@@ -277,16 +180,6 @@ app.get('/LOGIN', (req, res) => {
     }
     res.render('index(로그인 후)', { user: req.session.user });
 });
-
-
-
-
-
-
-
-
-
-
 
 // 관리자 페이지---------------------------------------------------------------------------------
 
@@ -301,10 +194,9 @@ app.get('/manager', (req, res) => {
     res.render('index(관리자)', { user: req.session.user });
 });
 
-
 app.post('/api/search-user', (req, res) => {
     const { id } = req.body;
-    queryWithReconnect(connection, dbConfig1, 'database 1', 'SELECT * FROM user WHERE ID = ?', [id], (error, results) => {
+    queryWithReconnect(dbConfig1, 'SELECT * FROM user WHERE ID = ?', [id], (error, results) => {
         if (error) return res.status(500).send('Database query error');
         if (results.length > 0) {
             res.json(results[0]);
@@ -325,34 +217,18 @@ app.post('/api/update-user', (req, res) => {
     if (role) updateFields.ROLE = role;
 
     const sql = 'UPDATE user SET ? WHERE ID = ?';
-    queryWithReconnect(connection, dbConfig1, 'database 1', sql, [updateFields, id], (error, results) => {
+    queryWithReconnect(dbConfig1, sql, [updateFields, id], (error, results) => {
         if (error) return res.status(500).send('Database update error');
         res.send('User updated');
     });
 });
 
 app.get('/api/unassigned-accounts', (req, res) => {
-    queryWithReconnect(connection, dbConfig1, 'database 1', 'SELECT ID, CAR, PHONE FROM user WHERE ROLE IS NULL', [], (error, results) => {
+    queryWithReconnect(dbConfig1, 'SELECT ID, CAR, PHONE FROM user WHERE ROLE IS NULL', [], (error, results) => {
         if (error) return res.status(500).send('Database query error');
         res.json(results);
     });
 });
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
 
 // 이지콘 하차지 조회 ---------------------------------------------------------------------------------------------------------------------------------------------------------------
 // '/ezicon' 라우트 설정
@@ -362,8 +238,6 @@ app.get('/ezicon', (req, res) => {
     }
     res.render('index(이지콘)', { user: req.session.user });
 });
-
-
 
 app.post('/api/search-another', (req, res) => {
     const containerNumber = req.body.containerNumber.trim();
@@ -381,7 +255,7 @@ app.post('/api/search-another', (req, res) => {
     `;
     const parameters = [yesterday, today];
 
-    queryWithReconnect(connection, dbConfig1, 'database 1', query2, parameters, (error, results) => {
+    queryWithReconnect(dbConfig1, query2, parameters, (error, results) => {
         if (error) {
             console.error('Database query error:', error);
             return res.status(500).json({ error: 'Server error' });
@@ -395,11 +269,6 @@ app.post('/api/search-another', (req, res) => {
     });
 });
 
-
-
-
-
-
 // 두동 하차지 조회 -------------------------------------------------------------------------------------------------------------------------------------------
 
 app.set('view engine', 'ejs');  
@@ -411,8 +280,6 @@ app.get('/dudong', (req, res) => {
     }
     res.render('index(두동)', { user: req.session.user });
 });
-
-
 
 app.post('/api/search-another2', (req, res) => {
     const containerNumber = req.body.containerNumber.trim();
@@ -430,7 +297,7 @@ app.post('/api/search-another2', (req, res) => {
     `;
     const parameters = [yesterday, today];
 
-    queryWithReconnect(connection, dbConfig1, 'database 1', query3, parameters, (error, results) => {
+    queryWithReconnect(dbConfig1, query3, parameters, (error, results) => {
         if (error) {
             console.error('Database query error:', error);
             return res.status(500).json({ error: 'Server error' });
@@ -444,22 +311,17 @@ app.post('/api/search-another2', (req, res) => {
     });
 });
 
-
-
-
-
 // 보관소(신항) 전송확인 -------------------------------------------------------------------------------
 
 app.set('view engine', 'ejs');
 app.set('views', path.join(__dirname, 'views'));
-// '/dudong' 라우트 설정
 
 app.get('/copino_sin', (req, res) => {
     if (!req.session.user || !['manage', 'employee'].includes(req.session.user.role)) {
         return res.redirect('/');
     }
 
-    queryWithReconnect(connection, dbConfig1, 'database 1', 'SELECT * FROM ts_work_new', [], (error, results) => {
+    queryWithReconnect(dbConfig1, 'SELECT * FROM ts_work_new', [], (error, results) => {
         if (error) {
             console.error('데이터베이스 쿼리 오류:', error);
             return res.status(500).send('데이터베이스 쿼리 오류');
@@ -474,7 +336,7 @@ let lastChecked = new Date();
 setInterval(() => {
     const now = new Date();
 
-    queryWithReconnect(connection, dbConfig1, 'database 1', 'SELECT * FROM ts_work_new WHERE CUNT > ? ORDER BY COPINO_TIME DESC;', [lastChecked], (error, results) => {
+    queryWithReconnect(dbConfig1, 'SELECT * FROM ts_work_new WHERE CUNT > ? ORDER BY COPINO_TIME DESC;', [lastChecked], (error, results) => {
         if (error) {
             console.error('데이터베이스 쿼리 오류:', error);
             io.emit('error', { message: '데이터 조회 중 오류 발생' });
@@ -502,7 +364,7 @@ app.post('/delete-container', (req, res) => {
     const placeholders = containerIds.map(() => '?').join(',');
     const sqlQuery = `DELETE FROM ts_work_new WHERE CUNT IN (${placeholders})`;
 
-    queryWithReconnect(connection, dbConfig1, 'database 1', sqlQuery, containerIds, (error, results) => {
+    queryWithReconnect(dbConfig1, sqlQuery, containerIds, (error, results) => {
         if (error) {
             console.error('데이터베이스 쿼리 오류:', error);
             return res.status(500).send('데이터베이스 쿼리 오류');
@@ -512,19 +374,17 @@ app.post('/delete-container', (req, res) => {
     });
 });
 
-
 // 보관소(북항) 전송확인 -------------------------------------------------------------------------------
 
 app.set('view engine', 'ejs');
 app.set('views', path.join(__dirname, 'views'));
-// '/dudong' 라우트 설정
 
 app.get('/copino_bok', (req, res) => {
     if (!req.session.user || !['manage', 'employee'].includes(req.session.user.role)) {
         return res.redirect('/');
     }
-    
-    queryWithReconnect(connection, dbConfig1, 'database 1', 'SELECT * FROM ts_work_old', [], (error, results) => {
+
+    queryWithReconnect(dbConfig1, 'SELECT * FROM ts_work_old', [], (error, results) => {
         if (error) {
             console.error('데이터베이스 쿼리 오류:', error);
             return res.status(500).send('데이터베이스 쿼리 오류');
@@ -539,7 +399,7 @@ let lastChecked2 = new Date();
 setInterval(() => {
     const now = new Date();
 
-    queryWithReconnect(connection, dbConfig1, 'database 1', 'SELECT * FROM ts_work_old WHERE CUNT > ? ORDER BY COPINO_TIME DESC;', [lastChecked2], (error, results) => {
+    queryWithReconnect(dbConfig1, 'SELECT * FROM ts_work_old WHERE CUNT > ? ORDER BY COPINO_TIME DESC;', [lastChecked2], (error, results) => {
         if (error) {
             console.error('데이터베이스 쿼리 오류:', error);
             io.emit('error', { message: '데이터 조회 중 오류 발생' });
@@ -567,7 +427,7 @@ app.post('/delete-container2', (req, res) => {
     const placeholders = containerIds.map(() => '?').join(',');
     const sqlQuery = `DELETE FROM ts_work_old WHERE CUNT IN (${placeholders})`;
 
-    queryWithReconnect(connection, dbConfig1, 'database 1', sqlQuery, containerIds, (error, results) => {
+    queryWithReconnect(dbConfig1, sqlQuery, containerIds, (error, results) => {
         if (error) {
             return res.status(500).send('데이터베이스 쿼리 오류');
         }
@@ -576,12 +436,10 @@ app.post('/delete-container2', (req, res) => {
     });
 });
 
-
-
 //본선 전송확인 ---------------------------------------------------------------------------------------------------------------------------------------------------------------
 
 app.get('/TS', (req, res) => {
-    queryWithReconnect(connection, dbConfig1, 'database 1', 'SELECT * FROM ts_work', [], (error, results) => {
+    queryWithReconnect(dbConfig1, 'SELECT * FROM ts_work', [], (error, results) => {
         if (error) {
             return res.status(500).send('데이터베이스 쿼리 오류');
         }
@@ -591,7 +449,7 @@ app.get('/TS', (req, res) => {
 });
 
 setInterval(() => {
-    queryWithReconnect(connection, dbConfig1, 'database 1', 'SELECT * FROM ts_work', [], (error, results) => {
+    queryWithReconnect(dbConfig1, 'SELECT * FROM ts_work', [], (error, results) => {
         if (error) {
             return;
         }
@@ -603,14 +461,12 @@ setInterval(() => {
     });
 }, 5000);
 
-
-
 //로그인 / 회원가입 ---------------------------------------------------------------------------------------------------------------------------------------------------------------
 
 // 회원 가입 함수
 function registerUser(name, id, password, phone, car) {
     const sql = `INSERT INTO user (name, id, password, phone, car) VALUES (?, ?, ?, ?, ?)`;
-    queryWithReconnect(connection, dbConfig1, 'database 1', sql, [name, id, password, phone, car], (error, result) => {
+    queryWithReconnect(dbConfig1, sql, [name, id, password, phone, car], (error, result) => {
         if (error) throw error;
         console.log("사용자 정보가 성공적으로 삽입되었습니다.");
     });
@@ -620,12 +476,12 @@ function registerUser(name, id, password, phone, car) {
 app.post('/signup', (req, res) => {
     const { NAME, ID, PASSWORD, PHONE, CAR } = req.body;
 
-    queryWithReconnect(connection, dbConfig1, 'database 1', 'SELECT * FROM user WHERE PHONE = ?', [PHONE], (error, results) => {
+    queryWithReconnect(dbConfig1, 'SELECT * FROM user WHERE PHONE = ?', [PHONE], (error, results) => {
         if (error) throw error;
         if (results.length > 0) {
             res.status(400).send('이 연락처는 이미 등록되어 있습니다.');
         } else {
-            queryWithReconnect(connection, dbConfig1, 'database 1', 'SELECT * FROM user WHERE ID = ?', [ID], (error, results) => {
+            queryWithReconnect(dbConfig1, 'SELECT * FROM user WHERE ID = ?', [ID], (error, results) => {
                 if (error) throw error;
                 if (results.length > 0) {
                     res.status(400).send('이 아이디는 이미 등록되어 있습니다.');
@@ -643,15 +499,13 @@ app.post('/login', (req, res) => {
     const { username, password } = req.body;
     const query = 'SELECT PASSWORD, ROLE FROM user WHERE ID = ?';
 
-    queryWithReconnect(connection, dbConfig1, 'database 1', query, [username], (error, results) => {
+    queryWithReconnect(dbConfig1, query, [username], (error, results) => {
         if (error) {
             console.error('쿼리 오류:', error);
             return res.status(500).send('로그인 중 오류 발생');
         }
         if (results.length > 0) {
-            // 입력된 비밀번호와 데이터베이스에 저장된 비밀번호를 평문으로 비교
             if (password === results[0].PASSWORD) {
-                // 세션에 사용자 정보 저장
                 req.session.user = {
                     id: username,
                     role: results[0].ROLE
@@ -669,13 +523,9 @@ app.post('/login', (req, res) => {
 // 로그아웃 처리
 app.get('/logout', (req, res) => {
     req.session.destroy(() => {
-        res.redirect('/login'); // 로그아웃 후 로그인 페이지로 리다이렉트
+        res.redirect('/login');
     });
 });
-
-// 연결 종료
-// connection.end();
-
 
 // 상차접수(컨테이너 번호)-----------------------------------------------------------------------------------------------------------------------------
 
@@ -690,7 +540,7 @@ app.post('/search-container', (req, res) => {
         WHERE RIGHT(A.CON_NO, 7) = ?
     `;
 
-    queryWithReconnect2(connection2, dbConfig2, 'database 2', selectQuery, [trimmedContainerNumber], (error, results) => {
+    queryWithReconnect(dbConfig2, selectQuery, [trimmedContainerNumber], (error, results) => {
         if (error) {
             return res.status(500).json({ error: 'Database query error' });
         }
@@ -713,7 +563,7 @@ app.post('/insert-order', (req, res) => {
 
     const userQuery = 'SELECT CAR FROM user WHERE id = ?';
 
-    queryWithReconnect(connection, dbConfig1, 'database 1', userQuery, [userId], (userError, userResults) => {
+    queryWithReconnect(dbConfig1, userQuery, [userId], (userError, userResults) => {
         if (userError) {
             return res.status(500).json({ error: 'User query error' });
         }
@@ -724,7 +574,7 @@ app.post('/insert-order', (req, res) => {
 
         const CAR_NO = userResults[0].CAR;
 
-        queryWithReconnect2(connection2, dbConfig2, 'database 2', "SET NAMES 'utf8mb4'", [], (err) => {
+        queryWithReconnect(dbConfig2, "SET NAMES 'utf8mb4'", [], (err) => {
             if (err) {
                 return res.status(500).json({ error: 'Error setting names' });
             }
@@ -739,7 +589,7 @@ app.post('/insert-order', (req, res) => {
                 LIMIT 1
             `;
 
-            queryWithReconnect2(connection2, dbConfig2, 'database 2', selectWorkQuery, [CON_NO], (selectError, selectResults) => {
+            queryWithReconnect(dbConfig2, selectWorkQuery, [CON_NO], (selectError, selectResults) => {
                 if (selectError) {
                     return res.status(500).json({ error: 'Database query error' });
                 }
@@ -756,7 +606,7 @@ app.post('/insert-order', (req, res) => {
                     WHERE W_IDX = ? AND O_DONE = 'N' AND O_DEL = 'N'
                 `;
 
-                queryWithReconnect2(connection2, dbConfig2, 'database 2', checkOrderQuery, [W_IDX], (checkError, checkResults) => {
+                queryWithReconnect(dbConfig2, checkOrderQuery, [W_IDX], (checkError, checkResults) => {
                     if (checkError) {
                         return res.status(500).json({ error: 'Check query error' });
                     }
@@ -777,7 +627,7 @@ app.post('/insert-order', (req, res) => {
                             VALUES (?, ?, ?, ?, ?, ?, ?, ?);
                         `;
 
-                        queryWithReconnect2(connection2, dbConfig2, 'database 2', insertQuery, insertValues, (insertError) => {
+                        queryWithReconnect(dbConfig2, insertQuery, insertValues, (insertError) => {
                             if (insertError) {
                                 return res.status(500).json({ error: 'Insert query error' });
                             }
@@ -789,7 +639,7 @@ app.post('/insert-order', (req, res) => {
                                     WHERE W_IDX = ?
                                 `;
 
-                                queryWithReconnect2(connection2, dbConfig2, 'database 2', updateSeqQuery, [W_IDX], (updateError) => {
+                                queryWithReconnect(dbConfig2, updateSeqQuery, [W_IDX], (updateError) => {
                                     if (updateError) {
                                         return res.status(500).json({ error: 'Update query error' });
                                     }
@@ -819,7 +669,7 @@ app.post('/search-onorder', (req, res) => {
         ORDER BY S_DONE
     `;
 
-    queryWithReconnect2(connection2, dbConfig2, 'database 2', onselectQuery, [trimmedonorder], (error, results) => {
+    queryWithReconnect(dbConfig2, onselectQuery, [trimmedonorder], (error, results) => {
         if (error) {
             return res.status(500).json({ error: 'Database query error' });
         }
@@ -842,7 +692,7 @@ app.post('/insert-onorder', (req, res) => {
 
     const useronQuery = 'SELECT CAR FROM user WHERE id = ?';
 
-    queryWithReconnect(connection, dbConfig1, 'database 1', useronQuery, [userId], (userError, userResults) => {
+    queryWithReconnect(dbConfig1, useronQuery, [userId], (userError, userResults) => {
         if (userError) {
             return res.status(500).json({ error: 'User query error' });
         }
@@ -853,7 +703,7 @@ app.post('/insert-onorder', (req, res) => {
 
         const CAR_NO = userResults[0].CAR;
 
-        queryWithReconnect2(connection2, dbConfig2, 'database 2', "SET NAMES 'utf8mb4'", [], (err) => {
+        queryWithReconnect(dbConfig2, "SET NAMES 'utf8mb4'", [], (err) => {
             if (err) {
                 return res.status(500).json({ error: 'Error setting names' });
             }
@@ -866,7 +716,7 @@ app.post('/insert-onorder', (req, res) => {
                 LIMIT 1
             `;
 
-            queryWithReconnect2(connection2, dbConfig2, 'database 2', selectSeqQuery, [S_NO], (seqError, seqResults) => {
+            queryWithReconnect(dbConfig2, selectSeqQuery, [S_NO], (seqError, seqResults) => {
                 if (seqError) {
                     return res.status(500).json({ error: 'Database query error' });
                 }
@@ -887,7 +737,7 @@ app.post('/insert-onorder', (req, res) => {
                     LIMIT 1
                 `;
 
-                queryWithReconnect2(connection2, dbConfig2, 'database 2', selectWorkonQuery, [W_IDX], (selectError, selectResults) => {
+                queryWithReconnect(dbConfig2, selectWorkonQuery, [W_IDX], (selectError, selectResults) => {
                     if (selectError) {
                         return res.status(500).json({ error: 'Database query error' });
                     }
@@ -904,7 +754,7 @@ app.post('/insert-onorder', (req, res) => {
                         WHERE W_IDX = ? AND O_DONE = 'N' AND O_DEL = 'N'
                     `;
 
-                    queryWithReconnect2(connection2, dbConfig2, 'database 2', checkOrderQuery, [W_IDX], (checkError, checkResults) => {
+                    queryWithReconnect(dbConfig2, checkOrderQuery, [W_IDX], (checkError, checkResults) => {
                         if (checkError) {
                             return res.status(500).json({ error: 'Check query error' });
                         }
@@ -925,7 +775,7 @@ app.post('/insert-onorder', (req, res) => {
                                 VALUES (?, ?, ?, ?, ?, ?, ?, ?);
                             `;
 
-                            queryWithReconnect2(connection2, dbConfig2, 'database 2', insertQuery, insertValues, (insertError) => {
+                            queryWithReconnect(dbConfig2, insertQuery, insertValues, (insertError) => {
                                 if (insertError) {
                                     return res.status(500).json({ error: 'Insert query error' });
                                 }
@@ -937,7 +787,7 @@ app.post('/insert-onorder', (req, res) => {
                                         WHERE W_IDX = ?
                                     `;
 
-                                    queryWithReconnect2(connection2, dbConfig2, 'database 2', updateSeqQuery, [W_IDX], (updateError) => {
+                                    queryWithReconnect(dbConfig2, updateSeqQuery, [W_IDX], (updateError) => {
                                         if (updateError) {
                                             return res.status(500).json({ error: 'Update query error' });
                                         }
@@ -961,7 +811,7 @@ app.post('/search-container-unload', (req, res) => {
     const { containerNumber, divLoc } = req.body;
     const trimmedContainerNumber = containerNumber.slice(-7);
 
-    queryWithReconnect2(connection2, dbConfig2, 'database 2', "SET NAMES 'utf8mb4'", [], (err) => {
+    queryWithReconnect(dbConfig2, "SET NAMES 'utf8mb4'", [], (err) => {
         if (err) {
             return res.status(500).json({ error: 'Error setting names' });
         }
@@ -986,7 +836,7 @@ app.post('/search-container-unload', (req, res) => {
 
         const queryValues = [trimmedContainerNumber, divLoc, trimmedContainerNumber];
 
-        queryWithReconnect2(connection2, dbConfig2, 'database 2', selectQuery, queryValues, (error, results) => {
+        queryWithReconnect(dbConfig2, selectQuery, queryValues, (error, results) => {
             if (error) {
                 return res.status(500).json({ error: 'Database query error' });
             }
@@ -1010,7 +860,7 @@ app.post('/insert-unload-order', (req, res) => {
 
     const userQuery = 'SELECT CAR FROM user WHERE id = ?';
 
-    queryWithReconnect(connection, dbConfig1, 'database 1', userQuery, [userId], (userError, userResults) => {
+    queryWithReconnect(dbConfig1, userQuery, [userId], (userError, userResults) => {
         if (userError) {
             return res.status(500).json({ error: 'User query error' });
         }
@@ -1021,7 +871,7 @@ app.post('/insert-unload-order', (req, res) => {
 
         const CAR_NO = userResults[0].CAR;
 
-        queryWithReconnect2(connection2, dbConfig2, 'database 2', "SET NAMES 'utf8mb4'", [], (err) => {
+        queryWithReconnect(dbConfig2, "SET NAMES 'utf8mb4'", [], (err) => {
             if (err) {
                 return res.status(500).json({ error: 'Error setting names' });
             }
@@ -1033,7 +883,7 @@ app.post('/insert-unload-order', (req, res) => {
                 LIMIT 1
             `;
 
-            queryWithReconnect2(connection2, dbConfig2, 'database 2', selectWorkQuery, [W_IDX], (selectError, selectResults) => {
+            queryWithReconnect(dbConfig2, selectWorkQuery, [W_IDX], (selectError, selectResults) => {
                 if (selectError) {
                     return res.status(500).json({ error: 'Database query error' });
                 }
@@ -1050,7 +900,7 @@ app.post('/insert-unload-order', (req, res) => {
                     WHERE W_IDX = ? AND O_DONE = 'N' AND O_DEL = 'N'
                 `;
 
-                queryWithReconnect2(connection2, dbConfig2, 'database 2', checkOrderQuery, [W_IDX], (checkError, checkResults) => {
+                queryWithReconnect(dbConfig2, checkOrderQuery, [W_IDX], (checkError, checkResults) => {
                     if (checkError) {
                         return res.status(500).json({ error: 'Check query error' });
                     }
@@ -1071,7 +921,7 @@ app.post('/insert-unload-order', (req, res) => {
                             VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?);
                         `;
 
-                        queryWithReconnect2(connection2, dbConfig2, 'database 2', insertQuery, insertValues, (insertError) => {
+                        queryWithReconnect(dbConfig2, insertQuery, insertValues, (insertError) => {
                             if (insertError) {
                                 return res.status(500).json({ error: 'Insert query error' });
                             }
@@ -1084,4 +934,3 @@ app.post('/insert-unload-order', (req, res) => {
         });
     });
 });
-
