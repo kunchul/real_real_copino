@@ -10,10 +10,12 @@ const path = require('path');
 let lastDataSnapshot = [];
 const bcrypt = require('bcryptjs');
 const session = require('express-session');
-const moment = require('moment');
 const iconv = require('iconv-lite');
 const cron = require('node-cron');
 const { exec } = require('child_process');
+
+const moment = require('moment-timezone');
+const timezone = 'Asia/Seoul';
 
 // 어제와 오늘 날짜를 계산
 const yesterday = moment().subtract(1, 'days').format('YYYY-MM-DD');
@@ -660,8 +662,9 @@ app.post('/insert-order', (req, res) => {
                             } else {
                                 const O_IO = '상차';
                                 const O_MEMO = '홈페이지 접수';
-                                const O_DATE_ORDER = moment().format('YYYY-MM-DD');
-                                const DATE_INS = moment().format('YYYY-MM-DD HH:mm:ss');
+                                const O_DATE_ORDER = moment().tz(timezone).format('YYYY-MM-DD');
+                                const DATE_INS = moment().tz(timezone).format('YYYY-MM-DD HH:mm:ss');
+
 
                                 const insertValues = [DIV_LOC, O_DATE_ORDER, CAR_NO, CON_TYPE, O_IO, W_IDX, O_MEMO, DATE_INS];
 
@@ -837,8 +840,9 @@ app.post('/insert-onorder', (req, res) => {
                                 } else {
                                     const O_IO = '상차';
                                     const O_MEMO = '홈페이지 접수';
-                                    const O_DATE_ORDER = moment().format('YYYY-MM-DD');
-                                    const DATE_INS = moment().format('YYYY-MM-DD HH:mm:ss');
+                                    const O_DATE_ORDER = moment().tz(timezone).format('YYYY-MM-DD');
+                                    const DATE_INS = moment().tz(timezone).format('YYYY-MM-DD HH:mm:ss');
+
 
                                     const insertValues = [DIV_LOC, O_DATE_ORDER, CAR_NO, CON_TYPE, O_IO, W_IDX, O_MEMO, DATE_INS];
 
@@ -1021,8 +1025,9 @@ app.post('/insert-unload-order', (req, res) => {
                             } else {
                                 const O_IO = '하차';
                                 const O_MEMO = '홈페이지 접수';
-                                const O_DATE_ORDER = moment().format('YYYY-MM-DD');
-                                const DATE_INS = moment().format('YYYY-MM-DD HH:mm:ss');
+                                const O_DATE_ORDER = moment().tz(timezone).format('YYYY-MM-DD');
+                                const DATE_INS = moment().tz(timezone).format('YYYY-MM-DD HH:mm:ss');
+                                
 
                                 const insertValues = [DIV_LOC, O_DATE_ORDER, CAR_NO, CON_TYPE, O_IO, W_IDX, O_MEMO, DATE_INS, WISH];
 
