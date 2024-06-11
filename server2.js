@@ -1068,12 +1068,7 @@ app.post('/insert-CYunload-order', (req, res) => {
     const { releaseNumberPrefix, releaseNumber, shipperName } = req.body;
     const userId = req.session.user.id;
 
-    console.log('Received data:', {
-        releaseNumberPrefix,
-        releaseNumber,
-        shipperName,
-        userId
-    });
+
 
     if (!userId) {
         return res.status(401).json({ error: 'User not logged in' });
@@ -1109,10 +1104,6 @@ app.post('/insert-CYunload-order', (req, res) => {
                     return res.status(500).json({ error: 'Database connection error' });
                 }
 
-                console.log('Query parameters:', {
-                    releaseNumberPrefix,
-                    releaseNumber
-                });
 
                 const query = `
                     SELECT R_IDX, R_LOC
