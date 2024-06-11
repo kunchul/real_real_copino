@@ -1,7 +1,7 @@
 const express = require('express');
 const http = require('http');
 const { Server } = require("socket.io");
-const bodyParser = require('body-parser'); // Body-parser 미들웨어 추가
+const bodyParser = require('body-parser'); 
 const app = express();
 const server = http.createServer(app);
 const io = new Server(server);
@@ -1050,6 +1050,164 @@ app.post('/insert-unload-order', (req, res) => {
                     });
                 });
             });
+        });
+    });
+});
+
+
+//우암-------------------------------------------------------------------------------------------------------------------------------------------------
+app.get('/uam', (req, res) => {
+    if (!req.session.user || !['manage', 'employee', 'driver', 'company_driver', 'delivery'].includes(req.session.user.role)) {
+        return res.redirect('/');
+    }
+    res.render('index(우암)', { user: req.session.user });
+});
+
+
+app.post('/insert-CYunload-order', (req, res) => {
+    const { releaseNumberPrefix, releaseNumber, shipperName } = req.body;
+    const userId = req.session.user.id;
+
+    console.log('Received data:', {
+        releaseNumberPrefix,
+        releaseNumber,
+        shipperName,
+        userId
+    });
+
+    if (!userId) {
+        return res.status(401).json({ error: 'User not logged in' });
+    }
+
+    const userQuery = 'SELECT CAR AS CAR_NO, PHONE AS CAR_HP FROM user WHERE id = ?';
+
+    const conn1 = createConnection(dbConfig1);
+    conn1.connect((err) => {
+        if (err) {
+            console.error('데이터베이스 연결 오류:', err);
+            return res.status(500).json({ error: 'Database connection error' });
+        }
+
+        conn1.query(userQuery, [userId], (userError, userResults) => {
+            if (userError) {
+                conn1.end();
+                return res.status(500).json({ error: 'User query error' });
+            }
+
+            if (userResults.length === 0) {
+                conn1.end();
+                return res.status(404).json({ error: 'User not found' });
+            }
+
+            const { CAR_NO, CAR_HP } = userResults[0];
+            conn1.end();
+
+            const conn2 = createConnection(dbConfig2);
+            conn2.connect((err) => {
+                if (err) {
+                    console.error('데이터베이스 연결 오류:', err);
+                    return res.status(500).json({ error: 'Database connection error' });
+                }
+
+                console.log('Query parameters:', {
+                    releaseNumberPrefix,
+                    releaseNumber
+                });
+
+                const query = `
+                    SELECT R_IDX, R_LOC
+                    FROM T_CODE_REL
+                    WHERE R_PREFIX = ?
+                      AND R_HOLD = 'N'
+                      AND R_DEL = 'N'
+                      AND R_DONE = 'N'
+                      AND R_NO = ?
+                    LIMIT 1
+                `;
+                conn2.query(query, [releaseNumberPrefix, releaseNumber], (error, results) => {
+                    if (error) {
+                        conn2.end();
+                        return res.status(500).json({ error: 'Query error' });
+                    }
+
+                    if (results.length === 0) {
+                        conn2.end();
+                        return res.status(404).json({ error: '등록된 릴리즈번호가 없음.(사무실확인)' });
+                    }
+
+                    const { R_IDX, R_LOC } = results[0];
+
+                    const qtyQuery = `
+                        SELECT A.R_QTY, IFNULL(COUNT(B.R_IDX), 0) AS QTY
+                        FROM T_CODE_REL A
+                        LEFT JOIN T_WORK_ORDER_CY B ON A.R_IDX = B.R_IDX
+                        WHERE B.O_DEL = 'N'
+                          AND A.R_IDX = ?
+                        GROUP BY A.R_IDX, A.R_QTY
+                    `;
+                    conn2.query(qtyQuery, [R_IDX], (qtyError, qtyResults) => {
+                        if (qtyError) {
+                            conn2.end();
+                            return res.status(500).json({ error: 'Query error' });
+                        }
+
+                        const { R_QTY, QTY } = qtyResults[0] || { R_QTY: 0, QTY: 0 };
+
+                        console.log('Quantity results:', qtyResults[0]);
+
+                        if (QTY > R_QTY) {
+                            conn2.end();
+                            return res.status(400).json({ error: `반출수량이 초과한 부킹.(사무실확인)]` });
+                        }
+                        
+                        const O_IO = '상차';
+                        const O_MEMO = '홈페이지 접수';
+                        const timezone = 'Asia/Seoul'; // 예시로 서울 시간대를 사용했습니다.
+                        const O_DATE_ORDER = moment().tz(timezone).format('YYYY-MM-DD');
+                        const DATE_INS = moment().tz(timezone).format('YYYY-MM-DD HH:mm:ss');
+                        
+                        const insertQuery = `
+                        INSERT INTO T_WORK_ORDER_CY
+                        (DIV_LOC, O_DATE_ORDER, O_LOC_WISH, CAR_NO, C_NAME, CAR_HP, O_IO, R_IDX, O_MEMO, DATE_INS, O_IS_BONSUN)
+                        VALUES
+                        (CONVERT(CAST(? AS BINARY) USING utf8mb4), ?, ?, CONVERT(CAST(? AS BINARY) USING utf8mb4), CONVERT(CAST(? AS BINARY) USING utf8mb4), ?, CONVERT(CAST(? AS BINARY) USING utf8mb4), ?, CONVERT(CAST(? AS BINARY) USING utf8mb4), ?, 'Y')
+                    `;
+                        
+                        const insertValues = ['우암CY', O_DATE_ORDER, R_LOC, CAR_NO, shipperName, CAR_HP, O_IO, R_IDX, O_MEMO, DATE_INS];
+                        conn2.query(insertQuery, insertValues, (insertError) => {
+                            conn2.end();
+                            if (insertError) {
+                                return res.status(500).json({ error: 'Insert error' });
+                            }
+                            res.json({ status: 'success', message: '상차 접수 완료.' });
+                        });
+                    });
+                });
+            });
+        });
+    });
+});
+
+app.get('/get-release-prefixes', (req, res) => {
+    const query = `
+        SELECT DISTINCT R_PREFIX
+        FROM T_CODE_REL
+        WHERE R_DONE = 'N'
+          AND R_DEL = 'N'
+          AND R_HOLD = 'N'
+    `;
+    const conn = createConnection(dbConfig2);
+    conn.connect((err) => {
+        if (err) {
+            console.error('데이터베이스 연결 오류:', err);
+            return res.status(500).json({ error: 'Database connection error' });
+        }
+        conn.query(query, (error, results) => {
+            conn.end();
+            if (error) {
+                return res.status(500).json({ error: 'Query error' });
+            }
+            res.json(results);
         });
     });
 });
