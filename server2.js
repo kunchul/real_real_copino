@@ -1153,7 +1153,6 @@ app.post('/insert-CYunload-order', (req, res) => {
                         
                         const O_IO = '상차';
                         const O_MEMO = '홈페이지 접수';
-                        const timezone = 'Asia/Seoul'; // 예시로 서울 시간대를 사용했습니다.
                         const O_DATE_ORDER = moment().tz(timezone).format('YYYY-MM-DD');
                         const DATE_INS = moment().tz(timezone).format('YYYY-MM-DD HH:mm:ss');
                         
