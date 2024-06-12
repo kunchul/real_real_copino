@@ -1068,7 +1068,6 @@ app.post('/insert-CYunload-order', (req, res) => {
     const { releaseNumberPrefix, releaseNumber, shipperName } = req.body;
     const userId = req.session.user.id;
 
-
     if (!userId) {
         return res.status(401).json({ error: 'User not logged in' });
     }
@@ -1104,7 +1103,7 @@ app.post('/insert-CYunload-order', (req, res) => {
                 }
 
                 const query = `
-                    SELECT R_IDX, R_LOC
+                    SELECT R_IDX, R_LOC, R_SIZE
                     FROM T_CODE_REL
                     WHERE R_PREFIX = ?
                       AND R_HOLD = 'N'
@@ -1124,52 +1123,80 @@ app.post('/insert-CYunload-order', (req, res) => {
                         return res.status(404).json({ error: '등록된 릴리즈번호가 없음.(사무실확인)' });
                     }
 
-                    const { R_IDX, R_LOC } = results[0];
+                    const { R_IDX, R_LOC, R_SIZE } = results[0];
 
-                    const qtyQuery = `
-                        SELECT A.R_QTY, IFNULL(COUNT(B.R_IDX), 0) AS QTY
-                        FROM T_CODE_REL A
-                        LEFT JOIN T_WORK_ORDER_CY B ON A.R_IDX = B.R_IDX
-                        WHERE B.O_DEL = 'N'
-                          AND A.R_IDX = ?
-                        GROUP BY A.R_IDX, A.R_QTY
-                    `;
-                    conn2.query(qtyQuery, [R_IDX], (qtyError, qtyResults) => {
-                        if (qtyError) {
-                            conn2.end();
-                            return res.status(500).json({ error: 'Query error' });
-                        }
-
-                        const { R_QTY, QTY } = qtyResults[0] || { R_QTY: 0, QTY: 0 };
-
-                        console.log('Quantity results:', qtyResults[0]);
-
-                        if (QTY > R_QTY) {
-                            conn2.end();
-                            return res.status(400).json({ error: `반출수량이 초과한 부킹.(사무실확인)]` });
-                        }
-
-                        const O_IO = '상차';
-                        const O_MEMO = '홈페이지 접수';
-                        const O_DATE_ORDER = moment().tz(timezone).format('YYYY-MM-DD');
-                        const DATE_INS = moment().tz(timezone).format('YYYY-MM-DD HH:mm:ss');
-
-                        const insertQuery = `
-                        INSERT INTO T_WORK_ORDER_CY
-                        (DIV_LOC, O_DATE_ORDER, O_LOC_WISH, CAR_NO, C_NAME, CAR_HP, O_IO, R_IDX, O_MEMO, DATE_INS, O_IS_BONSUN)
-                        VALUES
-                        (CONVERT(CAST(? AS BINARY) USING utf8mb4), ?, ?, CONVERT(CAST(? AS BINARY) USING utf8mb4), CONVERT(CAST(? AS BINARY) USING utf8mb4), ?, CONVERT(CAST(? AS BINARY) USING utf8mb4), ?, CONVERT(CAST(? AS BINARY) USING utf8mb4), ?, 'Y')
-                    `;
-
-                        const insertValues = ['우암CY', O_DATE_ORDER, R_LOC, CAR_NO, shipperName, CAR_HP, O_IO, R_IDX, O_MEMO, DATE_INS];
-                        conn2.query(insertQuery, insertValues, (insertError) => {
-                            conn2.end();
-                            if (insertError) {
-                                return res.status(500).json({ error: 'Insert error' });
+                    const checkAndInsert = () => {
+                        const qtyQuery = `
+                            SELECT A.R_QTY, IFNULL(COUNT(B.R_IDX), 0) AS QTY
+                            FROM T_CODE_REL A
+                            LEFT JOIN T_WORK_ORDER_CY B ON A.R_IDX = B.R_IDX
+                            WHERE B.O_DEL = 'N'
+                              AND A.R_IDX = ?
+                            GROUP BY A.R_IDX, A.R_QTY
+                        `;
+                        conn2.query(qtyQuery, [R_IDX], (qtyError, qtyResults) => {
+                            if (qtyError) {
+                                conn2.end();
+                                return res.status(500).json({ error: 'Query error' });
                             }
-                            res.json({ status: 'success', message: '상차 접수 완료.' });
+
+                            const { R_QTY, QTY } = qtyResults[0] || { R_QTY: 0, QTY: 0 };
+
+                            if (QTY > R_QTY) {
+                                conn2.end();
+                                return res.status(400).json({ error: `반출수량이 초과한 부킹.(사무실확인)` });
+                            }
+
+                            const O_IO = '상차';
+                            const O_MEMO = '홈페이지 접수';
+                            const O_DATE_ORDER = moment().tz(timezone).format('YYYY-MM-DD');
+                            const DATE_INS = moment().tz(timezone).format('YYYY-MM-DD HH:mm:ss');
+
+                            const insertQuery = `
+                                INSERT INTO T_WORK_ORDER_CY
+                                (DIV_LOC, O_DATE_ORDER, O_LOC_WISH, CAR_NO, C_NAME, CAR_HP, O_IO, R_IDX, O_MEMO, DATE_INS, O_IS_BONSUN)
+                                VALUES
+                                (CONVERT(CAST(? AS BINARY) USING utf8mb4), ?, ?, CONVERT(CAST(? AS BINARY) USING utf8mb4), CONVERT(CAST(? AS BINARY) USING utf8mb4), ?, CONVERT(CAST(? AS BINARY) USING utf8mb4), ?, CONVERT(CAST(? AS BINARY) USING utf8mb4), ?, 'Y')
+                            `;
+
+                            const insertValues = ['우암CY', O_DATE_ORDER, R_LOC, CAR_NO, shipperName, CAR_HP, O_IO, R_IDX, O_MEMO, DATE_INS];
+                            conn2.query(insertQuery, insertValues, (insertError) => {
+                                conn2.end();
+                                if (insertError) {
+                                    return res.status(500).json({ error: 'Insert error' });
+                                }
+                                res.json({ status: 'success', message: '상차 접수 완료.' });
+                            });
                         });
-                    });
+                    };
+
+                    if (R_SIZE === '40') {
+                        const checkDuplicateQuery = `
+                            SELECT O_IDX
+                            FROM T_WORK_ORDER_CY
+                            WHERE CONVERT(CAST(CAR_NO AS BINARY) USING utf8mb4) = CONVERT(CAST(? AS BINARY) USING utf8mb4) AND R_IDX = ? AND O_DEL = 'N'
+                        `;
+                        conn2.query(checkDuplicateQuery, [CAR_NO, R_IDX], (dupError, dupResults) => {
+                            if (dupError) {
+                                conn2.end();
+                                return res.status(500).json({ error: 'Duplicate check query error' });
+                            }
+
+                            if (dupResults.length > 0) {
+                                conn2.end();
+                                return res.status(400).json({ error: '중복접수입니다.' });
+                            }
+
+                            // 중복이 없는 경우에만 인서트 진행
+                            checkAndInsert();
+                        });
+                    } else if (R_SIZE === '20') {
+                        // 중복 확인 없이 바로 인서트 진행
+                        checkAndInsert();
+                    } else {
+                        conn2.end();
+                        return res.status(400).json({ error: 'Invalid R_SIZE value.' });
+                    }
                 });
             });
         });
