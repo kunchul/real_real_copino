@@ -1066,11 +1066,13 @@ app.get('/uam', (req, res) => {
 
 app.post('/insert-CYunload-order', (req, res) => {
     const { releaseNumberPrefix, releaseNumber, shipperName } = req.body;
-    const userId = req.session.user.id;
 
-    if (!userId) {
+    // 로그인 확인
+    if (!req.session || !req.session.user) {
         return res.status(401).json({ error: 'User not logged in' });
     }
+
+    const userId = req.session.user.id;
 
     const userQuery = 'SELECT CAR AS CAR_NO, PHONE AS CAR_HP FROM user WHERE id = ?';
 
@@ -1103,7 +1105,7 @@ app.post('/insert-CYunload-order', (req, res) => {
                 }
 
                 const query = `
-                    SELECT R_IDX, R_LOC, R_SIZE
+                    SELECT R_IDX, R_LOC, R_SIZE, R_QTY
                     FROM T_CODE_REL
                     WHERE R_PREFIX = ?
                       AND R_HOLD = 'N'
@@ -1123,16 +1125,14 @@ app.post('/insert-CYunload-order', (req, res) => {
                         return res.status(404).json({ error: '등록된 릴리즈번호가 없음.(사무실확인)' });
                     }
 
-                    const { R_IDX, R_LOC, R_SIZE } = results[0];
+                    const { R_IDX, R_LOC, R_SIZE, R_QTY } = results[0];
 
                     const checkAndInsert = () => {
                         const qtyQuery = `
-                            SELECT A.R_QTY, IFNULL(COUNT(B.R_IDX), 0) AS QTY
-                            FROM T_CODE_REL A
-                            LEFT JOIN T_WORK_ORDER_CY B ON A.R_IDX = B.R_IDX
-                            WHERE B.O_DEL = 'N'
-                              AND A.R_IDX = ?
-                            GROUP BY A.R_IDX, A.R_QTY
+                            SELECT COUNT(*) AS QTY
+                            FROM T_WORK_ORDER_CY
+                            WHERE R_IDX = ?
+                              AND O_DEL = 'N'
                         `;
                         conn2.query(qtyQuery, [R_IDX], (qtyError, qtyResults) => {
                             if (qtyError) {
@@ -1140,9 +1140,9 @@ app.post('/insert-CYunload-order', (req, res) => {
                                 return res.status(500).json({ error: 'Query error' });
                             }
 
-                            const { R_QTY, QTY } = qtyResults[0] || { R_QTY: 0, QTY: 0 };
+                            const QTY = qtyResults[0].QTY;
 
-                            if (QTY > R_QTY) {
+                            if (QTY >= R_QTY) {
                                 conn2.end();
                                 return res.status(400).json({ error: `반출수량이 초과한 부킹.(사무실확인)` });
                             }
@@ -1187,11 +1187,11 @@ app.post('/insert-CYunload-order', (req, res) => {
                                 return res.status(400).json({ error: '중복접수입니다.' });
                             }
 
-                            // 중복이 없는 경우에만 인서트 진행
+                            // 중복이 없는 경우에만 수량 체크 및 인서트 진행
                             checkAndInsert();
                         });
                     } else if (R_SIZE === '20') {
-                        // 중복 확인 없이 바로 인서트 진행
+                        // 중복 확인 없이 바로 수량 체크 및 인서트 진행
                         checkAndInsert();
                     } else {
                         conn2.end();
