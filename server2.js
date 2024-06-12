@@ -1069,7 +1069,6 @@ app.post('/insert-CYunload-order', (req, res) => {
     const userId = req.session.user.id;
 
 
-
     if (!userId) {
         return res.status(401).json({ error: 'User not logged in' });
     }
@@ -1103,7 +1102,6 @@ app.post('/insert-CYunload-order', (req, res) => {
                     console.error('데이터베이스 연결 오류:', err);
                     return res.status(500).json({ error: 'Database connection error' });
                 }
-
 
                 const query = `
                     SELECT R_IDX, R_LOC
@@ -1150,19 +1148,19 @@ app.post('/insert-CYunload-order', (req, res) => {
                             conn2.end();
                             return res.status(400).json({ error: `반출수량이 초과한 부킹.(사무실확인)]` });
                         }
-                        
+
                         const O_IO = '상차';
                         const O_MEMO = '홈페이지 접수';
                         const O_DATE_ORDER = moment().tz(timezone).format('YYYY-MM-DD');
                         const DATE_INS = moment().tz(timezone).format('YYYY-MM-DD HH:mm:ss');
-                        
+
                         const insertQuery = `
                         INSERT INTO T_WORK_ORDER_CY
                         (DIV_LOC, O_DATE_ORDER, O_LOC_WISH, CAR_NO, C_NAME, CAR_HP, O_IO, R_IDX, O_MEMO, DATE_INS, O_IS_BONSUN)
                         VALUES
                         (CONVERT(CAST(? AS BINARY) USING utf8mb4), ?, ?, CONVERT(CAST(? AS BINARY) USING utf8mb4), CONVERT(CAST(? AS BINARY) USING utf8mb4), ?, CONVERT(CAST(? AS BINARY) USING utf8mb4), ?, CONVERT(CAST(? AS BINARY) USING utf8mb4), ?, 'Y')
                     `;
-                        
+
                         const insertValues = ['우암CY', O_DATE_ORDER, R_LOC, CAR_NO, shipperName, CAR_HP, O_IO, R_IDX, O_MEMO, DATE_INS];
                         conn2.query(insertQuery, insertValues, (insertError) => {
                             conn2.end();
