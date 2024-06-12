@@ -65,7 +65,7 @@
                 <label for="releaseNumberPrefix">릴리즈 넘버 (영어):</label>
                 <select id="releaseNumberPrefix" name="releaseNumberPrefix" required></select>
                 <label for="releaseNumber">릴리즈 넘버 (숫자):</label>
-                <input type="number" id="releaseNumber" name="releaseNumber" required>
+                <input type="text" id="releaseNumber" name="releaseNumber" required>
                 <label for="shipperName">화주명:</label>
                 <input type="text" id="shipperName" name="shipperName" required>
                 <div id="message"></div> <!-- 스타일이 적용될 메시지 영역 -->
@@ -579,102 +579,72 @@
 
 
 <script>
-// 모달 열기 함수
-document.querySelector('.btn-unload').addEventListener('click', function() {
-            document.getElementById('modal-unload').style.display = "block";
+    // 폼 제출 함수
+    function submitUnloadForm() {
+        const form = document.getElementById('unloadForm');
+        const formData = new FormData(form);
+
+        const data = {};
+        formData.forEach((value, key) => {
+            data[key] = value;
         });
 
-// 모달 닫기 함수
-function closeModal(modalId) {
-    document.getElementById(modalId).style.display = "none";
-}
-
-
-// 폼 제출 함수
-function submitUnloadForm() {
-    const form = document.getElementById('unloadForm');
-    const formData = new FormData(form);
-
-    const data = {};
-    formData.forEach((value, key) => {
-        data[key] = value;
-    });
-
-    fetch('/insert-CYunload-order', {
-        method: 'POST',
-        headers: {
-            'Content-Type': 'application/json'
-        },
-        body: JSON.stringify(data)
-    })
-    .then(response => response.json())
-    .then(data => {
-        if (data.error) {
-            document.getElementById('message').innerText = data.error; // 에러 메시지 출력
-        } else {
-            document.getElementById('message').innerText = data.message; // 성공 메시지 출력
-            if (data.status === 'success') {
-                // 모달을 닫지 않고 메시지만 표시
-            }
-        }
-    })
-    .catch(error => {
-        console.error('Error:', error);
-        alert('서버 오류가 발생했습니다.');
-    });
-}
-
-function showMessage(message) {
-    // 오류 메시지를 표시할 요소를 찾습니다.
-    const errorMessageElement = document.getElementById('error-message');
-    // 메시지를 설정합니다.
-    errorMessageElement.textContent = message;
-    // 오류 메시지를 보여줍니다.
-    errorMessageElement.style.display = 'block';
-}
-
-// 페이지 로드 시 실행될 함수입니다.
-document.addEventListener('DOMContentLoaded', function() {
-    // 모달이 열릴 때마다 오류 메시지를 숨깁니다.
-    $('#modal-unload').on('show.bs.modal', function () {
-        const errorMessageElement = document.getElementById('error-message');
-        errorMessageElement.style.display = 'none';
-    });
-});
-
-// 모달 외부 클릭 시 닫기
-window.onclick = function(event) {
-    if (event.target.classList.contains('modal')) {
-        event.target.style.display = "none";
-    }
-}
-
-// 페이지 로드 시 릴리즈 넘버 프리픽스 데이터 가져오기
-document.addEventListener('DOMContentLoaded', function() {
-    fetch('/get-release-prefixes')
+        fetch('/insert-CYunload-order', {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json'
+            },
+            body: JSON.stringify(data)
+        })
         .then(response => response.json())
         .then(data => {
-            const select = document.getElementById('releaseNumberPrefix');
-            data.forEach(item => {
-                const option = document.createElement('option');
-                option.value = item.R_PREFIX;
-                option.textContent = item.R_PREFIX;
-                select.appendChild(option);
-            });
+            if (data.error) {
+                document.getElementById('message').innerText = data.error; // 에러 메시지 출력
+            } else {
+                document.getElementById('message').innerText = data.message; // 성공 메시지 출력
+                if (data.status === 'success') {
+                    // 성공 시 추가 동작을 여기에 추가할 수 있습니다.
+                }
+            }
         })
-        .catch(error => console.error('Error:', error));
-});
-
-function showModal(modalId) {
-    var modal = document.getElementById(modalId);
-    modal.style.display = "block";
-        // 여기에 선택된 데이터를 보여주는 로직을 추가하세요.
+        .catch(error => {
+            console.error('Error:', error);
+            alert('서버 오류가 발생했습니다.');
+        });
     }
 
-function closeModal(modalId) {
-    var modal = document.getElementById(modalId);
-    modal.style.display = "none";
+    // 페이지 로드 시 릴리즈 넘버 프리픽스 데이터 가져오기
+    document.addEventListener('DOMContentLoaded', function() {
+        fetch('/get-release-prefixes')
+            .then(response => response.json())
+            .then(data => {
+                const select = document.getElementById('releaseNumberPrefix');
+                data.forEach(item => {
+                    const option = document.createElement('option');
+                    option.value = item.R_PREFIX;
+                    option.textContent = item.R_PREFIX;
+                    select.appendChild(option);
+                });
+            })
+            .catch(error => console.error('Error:', error));
+    });
+
+    // 모달 열기 함수
+    document.querySelector('.btn-unload').addEventListener('click', function() {
+        document.getElementById('modal-unload').style.display = "block";
+    });
+
+    // 모달 닫기 함수
+    function closeModal(modalId) {
+        document.getElementById(modalId).style.display = "none";
+    }
+
+    // 모달 외부 클릭 시 닫기
+    window.onclick = function(event) {
+        if (event.target.classList.contains('modal')) {
+            event.target.style.display = "none";
         }
+    }
 </script>
 </body>
 
