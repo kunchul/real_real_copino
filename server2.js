@@ -1174,7 +1174,7 @@ app.post('/insert-CYunload-order', (req, res) => {
                         const checkDuplicateQuery = `
                             SELECT O_IDX
                             FROM T_WORK_ORDER_CY
-                            WHERE CONVERT(CAST(CAR_NO AS BINARY) USING utf8mb4) = CONVERT(CAST(? AS BINARY) USING utf8mb4) AND R_IDX = ? AND O_DEL = 'N'
+                            WHERE CONVERT(CAST(CAR_NO AS BINARY) USING utf8mb4) = CONVERT(CAST(? AS BINARY) USING utf8mb4) AND R_IDX = ? AND O_DEL = 'N' AND O_DONE ='N'
                         `;
                         conn2.query(checkDuplicateQuery, [CAR_NO, R_IDX], (dupError, dupResults) => {
                             if (dupError) {
@@ -1184,7 +1184,7 @@ app.post('/insert-CYunload-order', (req, res) => {
 
                             if (dupResults.length > 0) {
                                 conn2.end();
-                                return res.status(400).json({ error: '중복접수입니다.' });
+                                return res.status(400).json({ error: '중복접수 입니다.' });
                             }
 
                             // 중복이 없는 경우에만 수량 체크 및 인서트 진행
