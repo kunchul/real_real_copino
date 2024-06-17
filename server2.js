@@ -1298,7 +1298,7 @@ app.post('/baecha', (req, res) => {
                             B_CAUT,
                             B_IDX
                         FROM t_baecha
-                        WHERE B_DATE = ? AND B_CAR = ?
+                        WHERE B_DATE = ? AND B_CAR = ? AND B_DEL = 'N'
                     `;
 
                     const queryValues = [date, userCar];
