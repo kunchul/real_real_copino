@@ -763,48 +763,52 @@ $(document).ready(function () {
         });
     });
 
-    $(document).on("click", "#results-table tbody tr", function () {
-    const details = $(this).data('details');
-    const cautions = details.B_CAUT.split('/').map(item => item.trim()).join('<br>');
-    const formattedKumIn = formatNumberWithCommas(details.B_KUM_IN);
+    function convertToUppercase(input) {
+        input.value = input.value.toUpperCase();
+    }
 
     const createHtml = (value, id) => 
-            (value === '1' || value === '') 
-            ? `<span class="label-input-inline"><input type="text" id="${id}" value="${value}" class="inline-input"></span>` 
+        (value === '1' || value === '') 
+            ? `<span class="label-input-inline"><input type="text" id="${id}" value="${value}" class="inline-input" oninput="convertToUppercase(this)"></span>` 
             : `<span class="inline-span">${value}</span>`;
 
-    const conNoHtml = createHtml(details.CON_NO, 'con-no');
-    const conSealHtml = createHtml(details.CON_SEAL, 'con-seal');
+    $(document).on("click", "#results-table tbody tr", function () {
+        const details = $(this).data('details');
+        const cautions = details.B_CAUT.split('/').map(item => item.trim()).join('<br>');
+        const formattedKumIn = formatNumberWithCommas(details.B_KUM_IN);
 
-    $("#details-content").html(`
-        <p>차량번호 : ${details.B_CAR}</p>
-        <p>작업구분 : ${details.B_DIV_WORK}</p>
-        <p>상차지 : ${details.B_SANG}</p>
-        <p>하차지 : ${details.B_HA}</p>
-        <p>1. 투입일자 : ${details.B_DATE} <span style="color: red;">${details.B_TIME}</span></p>
-        <p>2. 작업지 : ${details.B_LOCAL_WORK}</p>
-        <p>3. 주소 : ${details.B_ADDRESS} <button id="copy-address-button" class="copy-button" data-address="${details.B_ADDRESS}">주소복사</button></p>
-        <p>----------------</p>
-        <p>(1) 컨테이너 정보 : ${details.B_SUNSA}</p>
-        <p>1. 컨테이너 번호 : ${conNoHtml}</p>
-        <p>2. 규격 : ${details.CON_KU}</p>
-        <p>3. 중량 : ${details.CON_KG}</p>
-        <p>4. 씰번호 : ${conSealHtml}</p>
-        <p>5. 부킹(D/O) : ${details.B_BOOKING}</p>
-        <p>6. 포트 : ${details.B_PORT}</p>
-        <p>----------------</p>
-        <P>(2) 비고</p>
-        <p>1. 화주 : ${details.B_OWNER}</p>
-        <p>- 담당자연락처 : ${details.B_OWNER_TEL}</p>
-        <p>2. 하불금액 : ${formattedKumIn}</p>
-        <p>----------------</p>
-        <p>[요약 및 주의사항]</p>
-        <p><span style="color: red;">${cautions}</span></p>
-        ${(details.CON_NO === '1' || details.CON_NO === '' || details.CON_SEAL === '1' || details.CON_SEAL === '') ? '<div class="button-container"><button id="save-updates" data-b_idx="' + details.B_IDX + '">업데이트</button></div>' : ''}
-    `);
-    $("#modal-results").hide();
-    $("#modal-details").show();
-});
+        const conNoHtml = createHtml(details.CON_NO, 'con-no');
+        const conSealHtml = createHtml(details.CON_SEAL, 'con-seal');
+
+        $("#details-content").html(`
+            <p>차량번호 : ${details.B_CAR}</p>
+            <p>작업구분 : ${details.B_DIV_WORK}</p>
+            <p>상차지 : ${details.B_SANG}</p>
+            <p>하차지 : ${details.B_HA}</p>
+            <p>1. 투입일자 : ${details.B_DATE} <span style="color: red;">${details.B_TIME}</span></p>
+            <p>2. 작업지 : ${details.B_LOCAL_WORK}</p>
+            <p>3. 주소 : ${details.B_ADDRESS} <button id="copy-address-button" class="copy-button" data-address="${details.B_ADDRESS}">주소복사</button></p>
+            <p>----------------</p>
+            <p>(1) 컨테이너 정보 : ${details.B_SUNSA}</p>
+            <p>1. 컨테이너 번호 : ${conNoHtml}</p>
+            <p>2. 규격 : ${details.CON_KU}</p>
+            <p>3. 중량 : ${details.CON_KG}</p>
+            <p>4. 씰번호 : ${conSealHtml}</p>
+            <p>5. 부킹(D/O) : ${details.B_BOOKING}</p>
+            <p>6. 포트 : ${details.B_PORT}</p>
+            <p>----------------</p>
+            <P>(2) 비고</p>
+            <p>1. 화주 : ${details.B_OWNER}</p>
+            <p>- 담당자연락처 : ${details.B_OWNER_TEL}</p>
+            <p>2. 하불금액 : ${formattedKumIn}</p>
+            <p>----------------</p>
+            <p>[요약 및 주의사항]</p>
+            <p><span style="color: red;">${cautions}</span></p>
+            ${(details.CON_NO === '1' || details.CON_NO === '' || details.CON_SEAL === '1' || details.CON_SEAL === '') ? '<div class="button-container"><button id="save-updates" data-b_idx="' + details.B_IDX + '">업데이트</button></div>' : ''}
+        `);
+        $("#modal-results").hide();
+        $("#modal-details").show();
+    });
 
     $(document).on("click", "#copy-address-button", function () {
         const address = $(this).data('address');
@@ -817,17 +821,34 @@ $(document).ready(function () {
 
     $(document).on("click", "#save-updates", function () {
         const bIdx = $(this).data('b_idx');
-        const conNo = $("#con-no").val();
-        const conSeal = $("#con-seal").val();
-        
+        let conNo = $("#con-no").val();
+        let conSeal = $("#con-seal").val();
+
+        // 빈칸일 경우 '1'로 설정
+        if (!conNo) {
+            conNo = '1';
+        }
+        if (!conSeal) {
+            conSeal = '1';
+        }
+
+        let dataToUpdate = {
+            B_IDX: bIdx
+        };
+
+        // 각각의 필드를 독립적으로 업데이트
+        if (conNo !== '1') {
+            dataToUpdate.CON_NO = conNo;
+        }
+
+        if (conSeal !== '1') {
+            dataToUpdate.CON_SEAL = conSeal;
+        }
+
         $.ajax({
             url: '/update-container',
             method: 'POST',
-            data: {
-                B_IDX: bIdx,
-                CON_NO: conNo,
-                CON_SEAL: conSeal
-            },
+            data: dataToUpdate,
             success: function (response) {
                 alert('업데이트가 완료되었습니다.');
                 // 업데이트된 내용을 다시 불러오기 위해 새로 고침
@@ -837,6 +858,10 @@ $(document).ready(function () {
                 alert('업데이트 중 오류가 발생했습니다.');
             }
         });
+    });
+
+    $(document).on("input", "#con-no, #con-seal", function () {
+        convertToUppercase(this);
     });
 });
     </script>
