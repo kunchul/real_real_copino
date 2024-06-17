@@ -361,7 +361,7 @@
     .modal-content {
         background-color: #4a4a4a;
         padding: 30px;
-        border-radius: 10px;
+        border-radius: 20px;
         color: white;
         font-weight: bold;
         text-align: center;
@@ -518,7 +518,7 @@
     @media (max-width: 480px) {
 
         .table th, .table td {
-            padding: 4px;
+            padding: 12px 4px 12px 4px;  
             font-size: 12px;
         }
 
@@ -532,8 +532,8 @@
     }
 
     @media (max-width: 480px) {
-        .table th, .table td {
-            font-size: 10px;
+        .table td {
+            font-size: 12px;
         }
 
         .table th {
@@ -577,8 +577,47 @@
     }
 
 
+    .copy-button {
+        padding: 6px;
+        font-size: 16px;
+        border: none;
+        border-radius: 9px;
+        background-color: #5C67F2;
+        color: white;
+        cursor: pointer;
+        font-family: 'Arial Rounded MT Bold', Verdana, sans-serif;
+        font-weight: bold;
+    }
+    @media (max-width: 480px) {
+
+        .copy-button {
+            padding: 6px;
+            font-size: 14px;
+        }
 
 
+    }
+
+    .button-container {
+        padding: 6px;
+        font-size: 16px;
+        border: none;
+        border-radius: 9px;
+        background-color: #5C67F2;
+        color: white;
+        cursor: pointer;
+        font-family: 'Arial Rounded MT Bold', Verdana, sans-serif;
+        font-weight: bold;
+    }
+    @media (max-width: 480px) {
+
+        .button-container {
+            padding: 6px;
+            font-size: 14px;
+        }
+
+
+    }
 
     
 
@@ -604,7 +643,7 @@ text-align: left !important; /* 좌측 정렬 강제 적용 */
     padding: 2px 5px;
     border-radius: 3px;
     border: 1px solid #ddd;
-    font-size: 14px;
+    font-size: 16px;
     margin: 1px 0;
     text-align: left !important; /* 좌측 정렬 강제 적용 */
     font-family: 'Arial Rounded MT Bold', Verdana, sans-serif; /* 텍스트 종류 설정 */
@@ -614,7 +653,7 @@ text-align: left !important; /* 좌측 정렬 강제 적용 */
     white-space: nowrap; /* 줄바꿈 없이 한 줄에 표시 */
     display: inline-block;
     padding: 3px;
-    font-size: 14px;
+    font-size: 16px;
     margin: 1px 0;
     text-align: left; /* 좌측 정렬 강제 적용 */
 }
@@ -630,7 +669,7 @@ text-align: left !important; /* 좌측 정렬 강제 적용 */
     }
 
     .inline-input {
-        width: 100px; /* 입력 필드 너비 작게 설정 */
+        width: 130px; /* 입력 필드 너비 작게 설정 */
         padding: 1px 3px; /* 패딩 작게 설정 */
     }
 
@@ -796,6 +835,7 @@ $(document).ready(function () {
             <p>4. 씰번호 : ${conSealHtml}</p>
             <p>5. 부킹(D/O) : ${details.B_BOOKING}</p>
             <p>6. 포트 : ${details.B_PORT}</p>
+             ${(details.CON_NO === '1' || details.CON_NO === '' || details.CON_SEAL === '1' || details.CON_SEAL === '') ? '<div class="con-seal botton" ><button class="button-container" id="save-updates" data-b_idx="' + details.B_IDX + '">컨,씰 전달( 입력 후 누르세요 )</button></div>' : ''}
             <p>----------------</p>
             <P>(2) 비고</p>
             <p>1. 화주 : ${details.B_OWNER}</p>
@@ -804,7 +844,7 @@ $(document).ready(function () {
             <p>----------------</p>
             <p>[요약 및 주의사항]</p>
             <p><span style="color: red;">${cautions}</span></p>
-            ${(details.CON_NO === '1' || details.CON_NO === '' || details.CON_SEAL === '1' || details.CON_SEAL === '') ? '<div class="button-container"><button id="save-updates" data-b_idx="' + details.B_IDX + '">업데이트</button></div>' : ''}
+            
         `);
         $("#modal-results").hide();
         $("#modal-details").show();
