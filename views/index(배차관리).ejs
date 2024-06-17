@@ -835,7 +835,7 @@ $(document).ready(function () {
             <p>4. 씰번호 : ${conSealHtml}</p>
             <p>5. 부킹(D/O) : ${details.B_BOOKING}</p>
             <p>6. 포트 : ${details.B_PORT}</p>
-             ${(details.CON_NO === '1' || details.CON_NO === '' || details.CON_SEAL === '1' || details.CON_SEAL === '') ? '<div class="con-seal botton" ><button class="button-container" id="save-updates" data-b_idx="' + details.B_IDX + '">컨,씰 전달( 입력 후 누르세요 )</button></div>' : ''}
+             ${(details.CON_NO === '1' || details.CON_NO === '' || details.CON_SEAL === '1' || details.CON_SEAL === '') ? '<div class="con-seal botton" ><button class="button-container" id="save-updates" data-b_idx="' + details.B_IDX + '">--컨테이너,씰 번호 전달(입력 후 클릭)--</button></div>' : ''}
             <p>----------------</p>
             <P>(2) 비고</p>
             <p>1. 화주 : ${details.B_OWNER}</p>
