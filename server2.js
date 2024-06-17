@@ -73,7 +73,7 @@ const dbConfig2 = {
     database: 'db_ezs',
     user: 'incom_user',
     password: 'rlawjdtns00',
-    charset: 'utf8'
+    charset: 'utf8mb4'
 };
 
 function createConnection(dbConfig) {
@@ -1224,5 +1224,118 @@ app.get('/get-release-prefixes', (req, res) => {
             }
             res.json(results);
         });
+    });
+});
+
+
+// 배차관리------------------------------------------------------------------------------------------------------------------------------------------------------------------------
+
+app.get('/deliver', (req, res) => {
+    if (!req.session.user || !['manage', 'employee', 'company_driver'].includes(req.session.user.role)) {
+        return res.redirect('/');
+    }
+    res.render('index(배차관리)', { user: req.session.user });
+});
+
+app.post('/baecha', (req, res) => {
+    const { date } = req.body;
+    const userId = req.session.user.id;
+
+    // 먼저 사용자의 차량 번호를 가져옵니다.
+    const conn1 = createConnection(dbConfig1);
+    conn1.connect((err) => {
+        if (err) {
+            console.error('데이터베이스 연결 오류:', err);
+            return res.status(500).json({ error: 'Database connection error' });
+        }
+
+        conn1.query('SELECT CAR FROM user WHERE ID = ?', [userId], (error, results) => {
+            conn1.end();
+            if (error) {
+                console.error('Database query error:', error);
+                return res.status(500).json({ error: 'Database query error' });
+            }
+
+            if (results.length === 0) {
+                return res.status(500).send('사용자 정보를 가져오는 중 오류가 발생했습니다.');
+            }
+
+            const userCar = results[0].CAR;
+
+            // 이후 해당 날짜와 차량 번호에 맞는 배차 정보를 가져옵니다.
+            const conn2 = createConnection(dbConfig2);
+            conn2.connect((err) => {
+                if (err) {
+                    console.error('데이터베이스 연결 오류:', err);
+                    return res.status(500).json({ error: 'Database connection error' });
+                }
+
+                conn2.query("SET NAMES 'utf8mb4'", [], (err) => {
+                    if (err) {
+                        conn2.end();
+                        return res.status(500).json({ error: 'Error setting names' });
+                    }
+
+                    const selectQuery = `
+                        SELECT 
+                            B_CAR,
+                            B_DIV_WORK,
+                            B_SANG,
+                            B_HA,
+                            B_DATE, B_TIME,
+                            B_LOCAL_WORK,
+                            B_ADDRESS,
+                            B_SUNSA,
+                            CON_NO,
+                            CON_KU,
+                            CON_KG,
+                            CON_SEAL,
+                            B_BOOKING,
+                            B_PORT,
+                            B_OWNER,
+                            B_OWNER_TEL,
+                            B_KUM_IN,
+                            B_CAUT,
+                            B_IDX
+                        FROM t_baecha
+                        WHERE B_DATE = ? AND B_CAR = ?
+                    `;
+
+                    const queryValues = [date, userCar];
+
+                    conn2.query(selectQuery, queryValues, (error, results) => {
+                        conn2.end();
+                        if (error) {
+                            console.error('Database query error:', error);
+                            return res.status(500).json({ error: 'Database query error' });
+                        }
+
+                        if (results.length > 0) {
+                            res.json(results);
+                        } else {
+                            res.json({ message: '등록된 배차 정보 없음.' });
+                        }
+                    });
+                });
+            });
+        });
+    });
+});
+
+
+app.post('/update-container', (req, res) => {
+    const { B_IDX, CON_NO, CON_SEAL } = req.body;
+    const updateQuery = `
+        UPDATE t_baecha
+        SET CON_NO = ?, CON_SEAL = ?
+        WHERE B_IDX = ?
+    `;
+
+    queryWithReconnect(dbConfig2, updateQuery, [CON_NO, CON_SEAL, B_IDX], (error, results) => {
+        if (error) {
+            console.error('Database update error:', error);
+            return res.status(500).send('Database update error');
+        }
+        res.send('Update successful');
     });
 });
