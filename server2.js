@@ -1325,13 +1325,34 @@ app.post('/baecha', (req, res) => {
 
 app.post('/update-container', (req, res) => {
     const { B_IDX, CON_NO, CON_SEAL } = req.body;
+
+    // 기본 값 설정
+    const conNoValue = CON_NO || '1';
+    const conSealValue = CON_SEAL || '1';
+
+    // 업데이트할 필드와 값 저장
+    const fieldsToUpdate = [];
+    const values = [];
+
+    if (CON_NO !== undefined) {
+        fieldsToUpdate.push('CON_NO = ?');
+        values.push(conNoValue);
+    }
+
+    if (CON_SEAL !== undefined) {
+        fieldsToUpdate.push('CON_SEAL = ?');
+        values.push(conSealValue);
+    }
+
+    values.push(B_IDX);
+
     const updateQuery = `
         UPDATE t_baecha
-        SET CON_NO = ?, CON_SEAL = ?
+        SET ${fieldsToUpdate.join(', ')}
         WHERE B_IDX = ?
     `;
 
-    queryWithReconnect(dbConfig2, updateQuery, [CON_NO, CON_SEAL, B_IDX], (error, results) => {
+    queryWithReconnect(dbConfig2, updateQuery, values, (error, results) => {
         if (error) {
             console.error('Database update error:', error);
             return res.status(500).send('Database update error');
