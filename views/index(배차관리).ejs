@@ -73,7 +73,7 @@
                 <button id="today-button" class="today-button">오늘</button>
                 <button id="tomorrow-button" class="tomorrow-button">내일</button>
             </div>
-            <input type="text" id="datepicker" class="input-style" placeholder="날짜를 선택하세요">
+            <input type="text" id="datepicker" class="input-style" placeholder="날짜를 선택하세요" readonly>
             <button id="search-button" class="search-button">검색</button>
         </div>
     </div>
@@ -626,7 +626,7 @@ text-align: left !important; /* 좌측 정렬 강제 적용 */
 /* 모바일 화면에 대한 스타일 조정 */
 @media (max-width: 480px) {
     .label-input-inline label, .inline-input, .inline-span {
-        font-size: 12px; /* 텍스트 크기 작게 설정 */
+        font-size: 14px; /* 텍스트 크기 작게 설정 */
     }
 
     .inline-input {
@@ -709,6 +709,10 @@ $(document).ready(function () {
         const selectedDate = new Date(e.date);
         const formattedDate = formatDateWithDay(selectedDate);
         $("#datepicker").val(formattedDate);
+    });
+
+    $("#datepicker").on('click', function() {
+        $(this).datepicker('show');
     });
 
     $("#datepicker").on('change', function() {
