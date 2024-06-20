@@ -254,6 +254,17 @@ app.get('/api/unassigned-accounts', (req, res) => {
     });
 });
 
+// 내정보 페이지--------------------------------------------------------------------------------------------------------------------------------------------------------------------
+app.set('view engine', 'ejs');  
+app.set('views', path.join(__dirname, 'views'))  
+
+// 관리자 페이지 라우트
+app.get('/my', (req, res) => {
+    if (!req.session.user || !['manage', 'employee', 'driver', 'company_driver', 'delivery', ''].includes(req.session.user.role)) {
+        return res.redirect('/');
+    }
+    res.render('index(내정보)', { user: req.session.user });
+});
 // 이지콘 하차지 조회 ---------------------------------------------------------------------------------------------------------------------------------------------------------------
 // '/ezicon' 라우트 설정
 app.get('/ezicon', (req, res) => {
@@ -488,9 +499,9 @@ setInterval(() => {
 //로그인 / 회원가입 ---------------------------------------------------------------------------------------------------------------------------------------------------------------
 
 // 회원 가입 함수
-function registerUser(name, id, password, phone, car) {
-    const sql = `INSERT INTO user (name, id, password, phone, car) VALUES (?, ?, ?, ?, ?)`;
-    queryWithReconnect(dbConfig1, sql, [name, id, password, phone, car], (error, result) => {
+function registerUser(name, id, password, phone, car, car_id) {
+    const sql = `INSERT INTO user (name, id, password, phone, car, car_id) VALUES (?, ?, ?, ?, ?, ?)`;
+    queryWithReconnect(dbConfig1, sql, [name, id, password, phone, car, car_id], (error, result) => {
         if (error) throw error;
         console.log("사용자 정보가 성공적으로 삽입되었습니다.");
     });
@@ -498,7 +509,7 @@ function registerUser(name, id, password, phone, car) {
 
 // 회원 가입 라우트
 app.post('/signup', (req, res) => {
-    const { NAME, ID, PASSWORD, PHONE, CAR } = req.body;
+    const { NAME, ID, PASSWORD, PHONE, CAR, CAR_ID } = req.body;
 
     queryWithReconnect(dbConfig1, 'SELECT * FROM user WHERE PHONE = ?', [PHONE], (error, results) => {
         if (error) throw error;
@@ -510,7 +521,7 @@ app.post('/signup', (req, res) => {
                 if (results.length > 0) {
                     res.status(400).send('이 아이디는 이미 등록되어 있습니다.');
                 } else {
-                    registerUser(NAME, ID, PASSWORD, PHONE, CAR);
+                    registerUser(NAME, ID, PASSWORD, PHONE, CAR, CAR_ID);
                     res.redirect('/');
                 }
             });
@@ -1105,7 +1116,7 @@ app.post('/insert-CYunload-order', (req, res) => {
                 }
 
                 const query = `
-                    SELECT R_IDX, R_LOC, R_SIZE, R_QTY
+                    SELECT R_IDX, R_LOC, R_SIZE, R_QTY, R_TYPE
                     FROM T_CODE_REL
                     WHERE R_PREFIX = ?
                       AND R_HOLD = 'N'
@@ -1125,7 +1136,7 @@ app.post('/insert-CYunload-order', (req, res) => {
                         return res.status(404).json({ error: '등록된 릴리즈번호가 없음.(사무실확인)' });
                     }
 
-                    const { R_IDX, R_LOC, R_SIZE, R_QTY } = results[0];
+                    const { R_IDX, R_LOC, R_SIZE, R_QTY, R_TYPE } = results[0];
 
                     const checkAndInsert = () => {
                         const qtyQuery = `
@@ -1151,15 +1162,16 @@ app.post('/insert-CYunload-order', (req, res) => {
                             const O_MEMO = '홈페이지 접수';
                             const O_DATE_ORDER = moment().tz(timezone).format('YYYY-MM-DD');
                             const DATE_INS = moment().tz(timezone).format('YYYY-MM-DD HH:mm:ss');
+                            const combinedSizeType = ''
 
                             const insertQuery = `
                                 INSERT INTO T_WORK_ORDER_CY
-                                (DIV_LOC, O_DATE_ORDER, O_LOC_WISH, CAR_NO, C_NAME, CAR_HP, O_IO, R_IDX, O_MEMO, DATE_INS, O_IS_BONSUN)
+                                (DIV_LOC, O_DATE_ORDER, O_LOC_WISH, CON_KU, CAR_NO, C_NAME, CAR_HP, O_IO, R_IDX, O_MEMO, DATE_INS, O_IS_BONSUN)
                                 VALUES
-                                (CONVERT(CAST(? AS BINARY) USING utf8mb4), ?, ?, CONVERT(CAST(? AS BINARY) USING utf8mb4), CONVERT(CAST(? AS BINARY) USING utf8mb4), ?, CONVERT(CAST(? AS BINARY) USING utf8mb4), ?, CONVERT(CAST(? AS BINARY) USING utf8mb4), ?, 'Y')
+                                (CONVERT(CAST(? AS BINARY) USING utf8mb4), ?, ?, ?, CONVERT(CAST(? AS BINARY) USING utf8mb4), CONVERT(CAST(? AS BINARY) USING utf8mb4), ?, CONVERT(CAST(? AS BINARY) USING utf8mb4), ?, CONVERT(CAST(? AS BINARY) USING utf8mb4), ?, 'Y')
                             `;
 
-                            const insertValues = ['우암CY', O_DATE_ORDER, R_LOC, CAR_NO, shipperName, CAR_HP, O_IO, R_IDX, O_MEMO, DATE_INS];
+                            const insertValues = ['우암CY', O_DATE_ORDER, R_LOC, combinedSizeType, CAR_NO, shipperName, CAR_HP, O_IO, R_IDX, O_MEMO, DATE_INS];
                             conn2.query(insertQuery, insertValues, (insertError) => {
                                 conn2.end();
                                 if (insertError) {
@@ -1357,6 +1369,146 @@ app.post('/update-container', (req, res) => {
             console.error('Database update error:', error);
             return res.status(500).send('Database update error');
         }
-        res.send('Update successful');
+        res.send('컨테이너 정보 전달 완료');
+    });
+});
+
+
+app.post('/send-loading', (req, res) => {
+    const { B_IDX, B_SUNSA, B_WORK, B_ONOFF, B_SANG, B_CUNT } = req.body;
+    const userId = req.session.user.id; // 현재 로그인한 사용자의 ID를 가져옵니다.
+
+    // B_CUNT의 자릿수를 확인
+    let finalBCunt = B_CUNT;
+    if (B_CUNT.length !== 11) {
+        switch (B_SANG) {
+            case 'DGT':
+            case '한진신항':
+                finalBCunt = 'M001';
+                break;
+            case '부산신항':
+                finalBCunt = 'EMPTY1';
+                break;
+            case '국제신항':
+                finalBCunt = 'ZZZZ1111111';
+                break;
+            case '현대신항':
+                finalBCunt = 'ZZZZ0000001';
+                break;
+            case '고려신항':
+                finalBCunt = 'ZZZZ1111111';
+                break;
+            case 'BCT':
+                finalBCunt = 'M001';
+                break;
+            case '5부두':
+                finalBCunt = 'ZZZZ1234567';
+                break;
+            case '신선대':
+            case 'BIT':
+                finalBCunt = 'AUTO1111';
+                break;
+            case '7부두':
+                finalBCunt = 'EMPTY';
+                break;
+            default:
+                break;
+        }
+    }
+
+    // 데이터베이스 1에서 현재 로그인한 사용자의 CAR_ID 값을 조회
+    const getUserCarQuery = 'SELECT CAR_ID FROM user WHERE ID = ?';
+    queryWithReconnect(dbConfig1, getUserCarQuery, [userId], (err, results) => {
+        if (err) {
+            console.error('데이터베이스 쿼리 오류:', err);
+            return res.status(500).send('데이터베이스 쿼리 오류');
+        }
+        
+        if (results.length === 0) {
+            return res.status(404).send('사용자 정보를 찾을 수 없습니다.');
+        }
+
+        const B_CAR = results[0].CAR_ID;
+
+        // 최종 데이터를 데이터베이스에 삽입
+        const insertQuery = `INSERT INTO b_copino (B_IDX, B_SUNSA, B_WORK, B_ONOFF, B_CUNT, B_CAR) VALUES (?, ?, ?, ?, ?, ?)`;
+        const values = [B_IDX, B_SUNSA, B_WORK, B_ONOFF, finalBCunt, B_CAR];
+
+        queryWithReconnect(dbConfig1, insertQuery, values, (error, results) => {
+            if (error) {
+                console.error('데이터베이스 쿼리 오류:', error);
+                return res.status(500).send('데이터베이스 쿼리 오류');
+            }
+            res.send('상차전송이 완료되었습니다.');
+        });
+    });
+});
+
+app.post('/send-unloading', (req, res) => {
+    const { B_IDX, B_SUNSA, B_WORK, B_ONOFF, B_SANG, B_CUNT } = req.body;
+    const userId = req.session.user.id;
+    // B_CUNT의 자릿수를 확인
+    let finalBCunt = B_CUNT;
+    if (B_CUNT.length !== 11) {
+        switch (B_SANG) {
+            case 'DGT':
+            case '한진신항':
+                finalBCunt = 'M001';
+                break;
+            case '부산신항':
+                finalBCunt = 'EMPTY1';
+                break;
+            case '국제신항':
+                finalBCunt = 'ZZZZ1111111';
+                break;
+            case '현대신항':
+                finalBCunt = 'ZZZZ0000001';
+                break;
+            case '고려신항':
+                finalBCunt = 'ZZZZ1111111';
+                break;
+            case 'BCT':
+                finalBCunt = 'M001';
+                break;
+            case '5부두':
+                finalBCunt = 'ZZZZ1234567';
+                break;
+            case '신선대':
+            case 'BIT':
+                finalBCunt = 'AUTO1111';
+                break;
+            case '7부두':
+                finalBCunt = 'EMPTY';
+                break;
+            default:
+                break;
+        }
+    }
+
+    // 데이터베이스 1에서 현재 로그인한 사용자의 CAR_ID 값을 조회
+    const getUserCarQuery = 'SELECT CAR_ID FROM user WHERE ID = ?';
+    queryWithReconnect(dbConfig1, getUserCarQuery, [userId], (err, results) => {
+        if (err) {
+            console.error('데이터베이스 쿼리 오류:', err);
+            return res.status(500).send('데이터베이스 쿼리 오류');
+        }
+        
+        if (results.length === 0) {
+            return res.status(404).send('사용자 정보를 찾을 수 없습니다.');
+        }
+
+        const B_CAR = results[0].CAR_ID;
+
+        // 최종 데이터를 데이터베이스에 삽입
+        const insertQuery = `INSERT INTO b_copino (B_IDX, B_SUNSA, B_WORK, B_ONOFF, B_CUNT, B_CAR) VALUES (?, ?, ?, ?, ?, ?)`;
+        const values = [B_IDX, B_SUNSA, B_WORK, B_ONOFF, finalBCunt, B_CAR];
+
+        queryWithReconnect(dbConfig1, insertQuery, values, (error, results) => {
+            if (error) {
+                console.error('데이터베이스 쿼리 오류:', error);
+                return res.status(500).send('데이터베이스 쿼리 오류');
+            }
+            res.send('하차전송이 완료되었습니다.');
+        });
     });
 });
