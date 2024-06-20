@@ -44,6 +44,9 @@
             <% if (user.role === 'manage') { %>
                 <a href="manager" class="nav-link">관리자 페이지</a>
             <% } %>
+            <% if (user) { %>
+                <a href="my" class="nav-link">내 정보</a>
+            <% } %>
             <a href="/" class="nav-link">로그아웃</a>
         </div>
     </nav>
@@ -54,9 +57,9 @@
             <div class="button-group">
                 <button class="btn-action btn-unload" data-modal="modal-unload">정보변경</button>
                 <button class="btn-action btn-location" data-modal="modal-location">권한미배정 계정</button>
-                <button class="btn-action btn-load" data-modal="modal-load">아이디 권한 부여</button>
-                <button class="btn-action btn-yard" data-modal="modal-yard">기아차</button>
-                <button class="btn-action btn-container" data-modal="modal-container">회원리스트</button>
+                <button class="btn-action btn-load" data-modal="modal-load">회원리스트</button>
+                <button class="btn-action btn-yard" data-modal="modal-yard">미정</button>
+                <button class="btn-action btn-container" data-modal="modal-container">미정</button>
             </div>
         </div>
     </main>
@@ -128,6 +131,34 @@
                 </table>
             </div>
         </div>
+        
+        <div id="modal-load" class="modal">
+            <div class="modal-content">
+                <span class="close">&times;</span>
+                <h2>회원리스트</h2>
+                <div class="input-group">
+                    <label for="search-car">차량번호:</label>
+                    <input type="text" id="search-car" class="input-style" placeholder="차량번호 입력">
+                    <button class="search-button" id="search-car-btn">검색</button>
+                </div>
+                <table class="table">
+                    <thead>
+                        <tr>
+                            <th>구분</th>
+                            <th>아이디</th>
+                            <th>연락처</th>
+                            <th>차량번호</th>
+                            <th>차량아이디</th>
+                            <th>소속파트</th>
+                            <th>권한</th>
+                        </tr>
+                    </thead>
+                    <tbody id="user-list"></tbody>
+                </table>
+                <div id="pagination" class="pagination"></div>
+            </div>
+        </div>
+
         
     <footer class="p-5 md-p-l5 bg-indigo-lightest-10">
         <div class="flex flex-wrap">
@@ -359,19 +390,23 @@
         transform: scale(1.05);
     }
 
+    
     .modal {
+        display: none;
         position: fixed;
         top: 50%;
         left: 50%;
         transform: translate(-50%, -50%);
         width: 80%;
-        max-width: 600px;
+        max-width: 900px;
+        height: 80%;
+        max-height: 600px;
+        overflow-y: auto;
         background-color: white;
         border-radius: 8px;
         box-shadow: 0 4px 8px rgba(0, 0, 0, 0.2);
         z-index: 1000;
         padding: 1.5em;
-        display: none;
     }
 
     @media (max-width: 480px) {
@@ -382,14 +417,15 @@
     }
 
     .modal-content {
-        background-color: #4a4a4a;
         padding: 30px;
-        border-radius: 10px;
+        background-color: #4a4a4a;
         color: white;
+        border-radius: 10px;
         font-weight: bold;
-        text-align: center;
         box-shadow: 0 6px 12px rgba(0, 0, 0, 0.5);
         position: relative;
+        height: 100%;
+        overflow: auto;
     }
 
     .close {
@@ -487,7 +523,7 @@
     }
 
     .nav-link {
-        font-size: 1.5em;
+        font-size: 1.4em;
         margin: 0.5em;
         padding: 0.5em 1em;
         color: #FFFFFF;
@@ -518,9 +554,20 @@
     }
 
 /*미권한 계정-----------------------------------------------------------------------------------------------------------*/
+    /* 기본 스타일 유지 */
+    .modal {
+        display: none;
+    }
+
+    .modal.visible {
+        opacity: 1;
+        visibility: visible;
+    }
+
     .table {
         width: 100%;
         border-collapse: collapse;
+        font-size: 0.9em;
     }
 
     .table th, .table td {
@@ -534,12 +581,31 @@
         color: white;
     }
 
-
     .table tr:hover {
         background-color: #ddd;
     }
-    @media (max-width: 480px) {
 
+    /* 페이지네이션 스타일 */
+    .pagination {
+        text-align: center;
+        margin-top: 10px;
+    }
+
+    .page-link {
+        display: inline-block;
+        padding: 5px 10px;
+        margin: 0 5px;
+        border: 1px solid #ddd;
+        color: #333;
+        text-decoration: none;
+    }
+
+    .page-link:hover {
+        background-color: #ddd;
+    }
+
+    /* 반응형 스타일 */
+    @media (max-width: 480px) {
         .table th, .table td {
             padding: 4px;
             font-size: 12px;
@@ -554,20 +620,6 @@
         }
     }
 
-    @media (max-width: 480px) {
-        .table th, .table td {
-            font-size: 10px;
-        }
-
-        .table th {
-            font-size: 12px;
-        }
-
-        .close {
-            font-size: 20px;
-        }
-    }
-
 
 
 </style>
@@ -575,7 +627,17 @@
     </style>
 
     <script>
-     $(document).ready(function () {
+    $(document).ready(function () {
+        const rowsPerPage = 15;
+        let currentPage = 1;
+        let userList = [];
+
+        // 모달 열기
+        $(".btn-load").click(function () {
+            $("#modal-load").show();
+            fetchUserList();
+        });
+
         $(".btn-unload").click(function () {
             $("#modal-unload").show();
         });
@@ -588,7 +650,7 @@
                 success: function (response) {
                     let tbody = $("#unassigned-accounts");
                     tbody.empty();
-                    response.forEach(function(row) {
+                    response.forEach(function (row) {
                         tbody.append(`
                             <tr>
                                 <td>${row.ID}</td>
@@ -598,17 +660,95 @@
                         `);
                     });
                 },
-                error: function () {
+                error: function (jqXHR, textStatus, errorThrown) {
+                    console.error('Error fetching unassigned accounts:', textStatus, errorThrown); // 오류 로그 출력
                     alert("권한미배정 계정을 가져오는 중 오류가 발생했습니다.");
                 }
             });
         });
 
-
+        // 모달 닫기
         $(".close").click(function () {
             $(this).closest(".modal").hide();
         });
 
+        // 전체 회원 리스트 가져오기
+        function fetchUserList() {
+            $.ajax({
+                url: "/api/user-list",
+                method: "GET",
+                success: function (response) {
+                    userList = response;
+                    displayUserList();
+                },
+                error: function (jqXHR, textStatus, errorThrown) {
+                    console.error('Error fetching user list:', textStatus, errorThrown); // 오류 로그 출력
+                    alert("회원 리스트를 가져오는 중 오류가 발생했습니다.");
+                }
+            });
+        }
+
+        // 차량번호로 회원 검색
+        $("#search-car-btn").click(function () {
+            const car = $("#search-car").val();
+            $.ajax({
+                url: "/api/search-by-car",
+                method: "POST",
+                data: { car: car },
+                success: function (response) {
+                    userList = response;
+                    displayUserList();
+                },
+                error: function (jqXHR, textStatus, errorThrown) {
+                    console.error('Error searching by car:', textStatus, errorThrown); // 오류 로그 출력
+                    alert("차량번호로 회원 검색 중 오류가 발생했습니다.");
+                }
+            });
+        });
+
+        // 회원 리스트를 테이블에 표시
+        function displayUserList() {
+            let tbody = $("#user-list");
+            tbody.empty();
+            const totalPages = Math.ceil(userList.length / rowsPerPage);
+            const startIndex = (currentPage - 1) * rowsPerPage;
+            const endIndex = Math.min(startIndex + rowsPerPage, userList.length);
+
+            for (let i = startIndex; i < endIndex; i++) {
+                let user = userList[i];
+                tbody.append(`
+                    <tr>
+                        <td>${i + 1}</td>
+                        <td>${user.ID}</td>
+                        <td>${user.PHONE}</td>
+                        <td>${user.CAR}</td>
+                        <td>${user.CAR_ID}</td>
+                        <td>${user.PART}</td>
+                        <td>${user.ROLE}</td>
+                    </tr>
+                `);
+            }
+            displayPagination(totalPages);
+        }
+
+        // 페이지네이션 표시
+        function displayPagination(totalPages) {
+            let pagination = $("#pagination");
+            pagination.empty();
+            for (let i = 1; i <= totalPages; i++) {
+                pagination.append(`
+                    <a href="#" class="page-link" data-page="${i}">${i}</a>
+                `);
+            }
+
+            $(".page-link").click(function (e) {
+                e.preventDefault();
+                currentPage = $(this).data("page");
+                displayUserList();
+            });
+        }
+
+        // 사용자 검색
         $("#search-btn").click(function () {
             const userId = $("#search-id").val();
             $.ajax({
@@ -623,12 +763,14 @@
                     $("#part").val(response.PART);
                     $("#role").val(response.ROLE);
                 },
-                error: function () {
+                error: function (jqXHR, textStatus, errorThrown) {
+                    console.error('Error searching user:', textStatus, errorThrown); // 오류 로그 출력
                     alert("사용자 정보를 찾을 수 없습니다.");
                 }
             });
         });
 
+        // 사용자 정보 업데이트
         $("#update-btn").click(function () {
             const userId = $("#search-id").val();
             const password = $("#password").val();
@@ -653,7 +795,8 @@
                     alert("사용자 정보가 업데이트되었습니다.");
                     $("#modal-unload").hide();
                 },
-                error: function () {
+                error: function (jqXHR, textStatus, errorThrown) {
+                    console.error('Error updating user:', textStatus, errorThrown); // 오류 로그 출력
                     alert("업데이트 중 오류가 발생했습니다.");
                 }
             });
