@@ -872,44 +872,46 @@ $(document).ready(function () {
     });
 
     $(document).on("click", "#save-updates", function () {
-        const bIdx = $(this).data('b_idx');
-        let conNo = $("#con-no").val();
-        let conSeal = $("#con-seal").val();
+        if (confirm("정말로 업데이트 하시겠습니까?")) {
+            const bIdx = $(this).data('b_idx');
+            let conNo = $("#con-no").val();
+            let conSeal = $("#con-seal").val();
 
-        // 빈칸일 경우 '1'로 설정
-        if (!conNo) {
-            conNo = '';
-        }
-        if (!conSeal) {
-            conSeal = '';
-        }
-
-        let dataToUpdate = {
-            B_IDX: bIdx
-        };
-
-        // 각각의 필드를 독립적으로 업데이트
-        if (conNo !== '1') {
-            dataToUpdate.CON_NO = conNo;
-        }
-
-        if (conSeal !== '1') {
-            dataToUpdate.CON_SEAL = conSeal;
-        }
-
-        $.ajax({
-            url: '/update-container',
-            method: 'POST',
-            data: dataToUpdate,
-            success: function (response) {
-                alert('업데이트가 완료되었습니다.');
-                // 업데이트된 내용을 다시 불러오기 위해 새로 고침
-                location.reload();
-            },
-            error: function () {
-                alert('업데이트 중 오류가 발생했습니다.');
+            // 빈칸일 경우 'EMPTY'로 설정
+            if (!conNo) {
+                conNo = 'EMPTY';
             }
-        });
+            if (!conSeal) {
+                conSeal = 'EMPTY';
+            }
+
+            let dataToUpdate = {
+                B_IDX: bIdx
+            };
+
+            // 각각의 필드를 독립적으로 업데이트
+            if (conNo !== 'EMPTY') {
+                dataToUpdate.CON_NO = conNo;
+            }
+
+            if (conSeal !== 'EMPTY') {
+                dataToUpdate.CON_SEAL = conSeal;
+            }
+
+            $.ajax({
+                url: '/update-container',
+                method: 'POST',
+                data: dataToUpdate,
+                success: function (response) {
+                    alert('업데이트가 완료되었습니다.');
+                    // 업데이트된 내용을 다시 불러오기 위해 새로 고침
+                    location.reload();
+                },
+                error: function () {
+                    alert('업데이트 중 오류가 발생했습니다.');
+                }
+            });
+        }
     });
 
     $(document).on("input", "#con-no, #con-seal", function () {
