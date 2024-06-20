@@ -193,6 +193,8 @@ app.get('/', function (req, res) {
     res.sendFile(path.join(__dirname, 'index.html'));
 });
 
+
+
 // 로그인 후---------------------------------------------------------------------------------------------------------------------------------------------------------------
 app.set('view engine', 'ejs');  
 app.set('views', path.join(__dirname, 'views'))  
@@ -202,8 +204,80 @@ app.get('/LOGIN', (req, res) => {
     if (!req.session.user) {
         return res.redirect('/');
     }
-    res.render('index(로그인 후)', { user: req.session.user });
+
+    const userId = req.session.user.id;
+
+    queryWithReconnect(dbConfig1, 'SELECT NAME, CAR FROM user WHERE ID = ?', [userId], (err, userResults) => {
+        if (err) {
+            console.error('Error fetching user data: ', err);
+            return res.status(500).send('Internal Server Error');
+        }
+
+        if (userResults.length > 0) {
+            const user = userResults[0];
+            const car = user.CAR;
+            const name = user.NAME;
+            const today = new Date().toISOString().slice(0, 10);
+
+            queryWithReconnect(dbConfig2, 'SELECT COUNT(*) AS count FROM t_baecha WHERE B_DATE = ? AND CONVERT(CAST(B_CAR AS BINARY) USING utf8mb4) = CONVERT(CAST(? AS BINARY) USING utf8mb4)', [today, car], (err, baechaResults) => {
+                if (err) {
+                    console.error('Error fetching baecha count: ', err);
+                    return res.status(500).send('Internal Server Error');
+                }
+
+                const count = baechaResults[0].count;
+
+                res.render('index(로그인 후)', {
+                    user: req.session.user,
+                    car: car,
+                    name: name,
+                    count: count
+                });
+            });
+        } else {
+            res.status(404).send('User not found');
+        }
+    });
 });
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
 
 // 관리자 페이지---------------------------------------------------------------------------------
 
@@ -254,17 +328,128 @@ app.get('/api/unassigned-accounts', (req, res) => {
     });
 });
 
+app.get('/api/user-list', (req, res) => {
+    queryWithReconnect(dbConfig1, 'SELECT ID, PHONE, CAR, CAR_ID, PART, ROLE FROM user', [], (error, results) => {
+        if (error) {
+            console.error('Database query error:', error); // 오류 로그 출력
+            return res.status(500).send('Database query error');
+        }
+        res.json(results);
+    });
+});
+
+app.post('/api/search-by-car', (req, res) => {
+    const { car } = req.body;
+    queryWithReconnect(dbConfig1, 'SELECT ID, PHONE, CAR, CAR_ID, PART, ROLE FROM user WHERE CAR = ?', [car], (error, results) => {
+        if (error) {
+            console.error('Database query error:', error); // 오류 로그 출력
+            return res.status(500).send('Database query error');
+        }
+        res.json(results);
+    });
+});
+
+
 // 내정보 페이지--------------------------------------------------------------------------------------------------------------------------------------------------------------------
 app.set('view engine', 'ejs');  
 app.set('views', path.join(__dirname, 'views'))  
 
-// 관리자 페이지 라우트
+
 app.get('/my', (req, res) => {
     if (!req.session.user || !['manage', 'employee', 'driver', 'company_driver', 'delivery', ''].includes(req.session.user.role)) {
         return res.redirect('/');
     }
     res.render('index(내정보)', { user: req.session.user });
 });
+
+
+
+// 사용자 정보 가져오기 API
+app.get('/api/my-info', (req, res) => {
+    if (!req.session.user) {
+        return res.status(401).send('로그인이 필요합니다.');
+    }
+
+    const userId = req.session.user.id;
+    const query = 'SELECT NAME, PASSWORD, PHONE, CAR, CAR_ID, PART FROM user WHERE ID = ?';
+    queryWithReconnect(dbConfig1, query, [userId], (error, results) => {
+        if (error) {
+            return res.status(500).send('데이터베이스 오류');
+        }
+        if (results.length === 0) {
+            return res.status(404).send('사용자를 찾을 수 없습니다.');
+        }
+        res.json(results[0]);
+    });
+});
+
+// 사용자 정보 업데이트 API
+app.post('/update-user', (req, res) => {
+    if (!req.session.user) {
+        return res.status(401).send('로그인이 필요합니다.');
+    }
+
+    const userId = req.session.user.id;
+    const { name, password, phone, car, car_id, part } = req.body;
+
+    const updateQuery = `
+        UPDATE user 
+        SET NAME = ?, PASSWORD = ?, PHONE = ?, CAR = ?, CAR_ID = ?, PART = ?
+        WHERE ID = ?
+    `;
+    const updateValues = [name, password, phone, car, car_id, part, userId];
+
+    queryWithReconnect(dbConfig1, updateQuery, updateValues, (error, results) => {
+        if (error) {
+            return res.status(500).send('데이터베이스 업데이트 오류');
+        }
+        res.json({ message: '정보가 업데이트되었습니다.' });
+    });
+});
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
 // 이지콘 하차지 조회 ---------------------------------------------------------------------------------------------------------------------------------------------------------------
 // '/ezicon' 라우트 설정
 app.get('/ezicon', (req, res) => {
