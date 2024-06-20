@@ -1,6 +1,5 @@
 <!DOCTYPE html>
 <html lang="en">
-
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
@@ -11,14 +10,11 @@
         href="https://cdnjs.cloudflare.com/ajax/libs/slick-carousel/1.9.0/slick.min.css" />
     <link rel="stylesheet" type="text/css" href="//cdn.jsdelivr.net/npm/slick-carousel@1.8.1/slick/slick-theme.css" />
 </head>
-
 <body class="bg-black muli">
     <nav class="w-100pc flex flex-column md-flex-row md-px-10 py-5 bg-black">
         <div class="flex justify-between">
-            <a href="#" class="flex items-center p-2 mr-4 no-underline">
-            </a>
-            <a data-toggle="toggle-nav" data-target="#nav-items" href="#"
-                class="flex items-center ml-auto md-hidden indigo-lighter opacity-50 hover-opacity-100 ease-300 p-1 m-3">
+            <a href="#" class="flex items-center p-2 mr-4 no-underline"></a>
+            <a data-toggle="toggle-nav" data-target="#nav-items" href="#" class="flex items-center ml-auto md-hidden indigo-lighter opacity-50 hover-opacity-100 ease-300 p-1 m-3">
                 <i data-feather="menu"></i>
             </a>
         </div>
@@ -32,7 +28,7 @@
             <% } %>
             <% if (['manage', 'employee', 'driver', 'company_driver', 'delivery'].includes(user.role)) { %>
                 <a href="uam" class="nav-link">우암CY</a>
-            <% } %>>
+            <% } %>
             <% if (['manage', 'employee'].includes(user.role)) { %>
                 <a href="copino_sin" class="nav-link">COPINO CHECK(신항)</a>
             <% } %>
@@ -42,33 +38,32 @@
             <% if (user.role === 'manage') { %>
                 <a href="manager" class="nav-link">관리자 페이지</a>
             <% } %>
+            <% if (user) { %>
+                <a href="my" class="nav-link">내 정보</a>
+            <% } %>
             <a href="/" class="nav-link">로그아웃</a>
         </div>
     </nav>
 
+    <section id="user-info" class="flex justify-center items-center">
+        <div class="info-container mx-5 md-mx-l5 p-5">
+            <div>
+                <h2 class="white fs-l lh-1 fw-700">안녕하세요</h2>
+                <p class="highlight fs-l lh-1"><%= car %> <%= name %> 사장님</p>
+                <p class="white fs-l lh-1 fw-700">오늘도 안전운전 되시길 바랍니다.</p>
+                <p class="white fs-l lh-1 fw-700">금일 배차는 '<span class="highlight"><%= count %></span>'건이 있습니다</p>
+            </div>
+        </div>
+    </section>
 
-
-    
-
-
-+
-
-
-
-
-
-
-    
     <!-- hero section -->
     <section id="home" class="min-h-100vh flex justify-start items-center">
         <div class="mx-5 md-mx-l5">
             <div>
-                <h1 class="white fs-l3 lh-2 md-fs-xl1 md-lh-1 fw-900 ">EZIS COPINO Program <br /> 문의 : 유지훈 010-4303-6887</h1>
+                <h1 class="white fs-l3 lh-2 md-fs-xl1 md-lh-1 fw-900 ">EZIS COPINO Program <br /> 사용문의 : 조건철</h1>
+            </div>
         </div>
     </section>
-
-    </section>
-
 
     <!-- footer -->
     <footer class="p-5 md-p-l5 bg-indigo-lightest-10">
@@ -84,30 +79,51 @@
             <div class="w-100pc md-w-50pc">
                 <div class="flex justify-around">
                     <div class="w-33pc md-px-10 mb-10">
-                       
-        
-                <div class="flex justify-around my-8">
-                    <a href="#" class="relative p-5 bg-indigo br-round white hover-scale-up-1 ease-400"><i
-                            data-feather="twitter" class="absolute-center h-4"></i></a>
-                    <a href="#" class="relative p-5 bg-indigo br-round white hover-scale-up-1 ease-400"><i
-                            data-feather="facebook" class="absolute-center h-4"></i></a>
-                    <a href="#" class="relative p-5 bg-indigo br-round white hover-scale-up-1 ease-400"><i
-                            data-feather="instagram" class="absolute-center h-4"></i></a>
+                        <div class="flex justify-around my-8">
+                            <a href="#" class="relative p-5 bg-indigo br-round white hover-scale-up-1 ease-400"><i data-feather="twitter" class="absolute-center h-4"></i></a>
+                            <a href="#" class="relative p-5 bg-indigo br-round white hover-scale-up-1 ease-400"><i data-feather="facebook" class="absolute-center h-4"></i></a>
+                            <a href="#" class="relative p-5 bg-indigo br-round white hover-scale-up-1 ease-400"><i data-feather="instagram" class="absolute-center h-4"></i></a>
+                        </div>
+                    </div>
                 </div>
             </div>
         </div>
     </footer>
 
-    </div>
     <script src="https://code.jquery.com/jquery-3.4.1.min.js"></script>
     <script src="https://unpkg.com/feather-icons"></script>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/slick-carousel/1.9.0/slick.min.js"></script>
     <script src="https://cdn.jsdelivr.net/gh/cferdinandi/smooth-scroll@15.0.0/dist/smooth-scroll.polyfills.min.js"></script>
     <script src="assets/js/script.js"></script>
 </body>
-
 </html>
 <style>
+
+.info-container {
+        background-color: rgba(255, 255, 255, 0.1);
+        border: 1px solid #ddd;
+        border-radius: 8px;
+        padding: 20px;
+        max-width: 500px;
+        width: 100%;
+        font-family: 'Muli', sans-serif;
+    }
+
+    .fs-l {
+        font-size: 1.25rem;
+    }
+
+    .lh-1 {
+        line-height: 1.5;
+    }
+
+    .highlight {
+        color: #add8e6;
+    }
+
+    #user-info {
+        margin-top: 0; /* 네비게이션 바와의 간격을 제거 */
+    }
 .auth-section {
     display: flex;
     flex-direction: column;
@@ -312,7 +328,7 @@ h1, h2 {
 /* nav-link 스타일 */
 /* nav-link 스타일 */
 .nav-link {
-    font-size: 1.5em; /* 글꼴 크기 키우기 */
+    font-size: 1.4em; /* 글꼴 크기 키우기 */
     margin: 0.5em;
     padding: 0.5em 1em;
     color: #FFFFFF; /* 텍스트 색상을 하얀색으로 설정 */
