@@ -90,6 +90,9 @@
             <% if (user.role === 'manage') { %>
                 <a href="manager" class="nav-link">관리자 페이지</a>
             <% } %>
+            <% if (user) { %>
+                <a href="my" class="nav-link">내 정보</a>
+            <% } %>
             <a href="/" class="nav-link">로그아웃</a>
         </div>
     </nav>
@@ -278,7 +281,7 @@
 
     /* nav-link 스타일 */
     .nav-link {
-        font-size: 1.5em; /* 글꼴 크기 키우기 */
+        font-size: 1.4em; /* 글꼴 크기 키우기 */
         margin: 0.5em;
         padding: 0.5em 1em;
         color: #FFFFFF; /* 텍스트 색상을 하얀색으로 설정 */
