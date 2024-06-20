@@ -351,15 +351,27 @@ app.post('/api/search-by-car', (req, res) => {
 
 
 // 내정보 페이지--------------------------------------------------------------------------------------------------------------------------------------------------------------------
-app.set('view engine', 'ejs');  
-app.set('views', path.join(__dirname, 'views'))  
-
-
 app.get('/my', (req, res) => {
-    if (!req.session.user || !['manage', 'employee', 'driver', 'company_driver', 'delivery', ''].includes(req.session.user.role)) {
+    if (!req.session.user || !req.session.user.id) {
         return res.redirect('/');
     }
-    res.render('index(내정보)', { user: req.session.user });
+
+    const userId = req.session.user.id;
+
+    queryWithReconnect(dbConfig1, 'SELECT ID FROM user WHERE ID = ?', [userId], (err, results) => {
+        if (err) {
+            console.error('Error checking user ID:', err);
+            return res.status(500).send('Internal Server Error');
+        }
+
+        if (results.length === 0) {
+            // ID가 존재하지 않으면 홈으로 리디렉션
+            return res.redirect('/');
+        }
+
+        // ID가 존재하면 index(내정보) 뷰를 렌더링
+        res.render('index(내정보)', { user: req.session.user });
+    });
 });
 
 
