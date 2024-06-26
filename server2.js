@@ -922,23 +922,44 @@ app.post('/search-onorder', (req, res) => {
     const { onorder } = req.body;
     const trimmedonorder = onorder.slice(-3);
 
-    const onselectQuery = `
-        SELECT S_NO, W_IDX
-        FROM t_work_seq
-        WHERE RIGHT(S_NO, 3) = ?
-        ORDER BY S_DONE
-    `;
+    const conn2 = mysql.createConnection(dbConfig2);
 
-    queryWithReconnect(dbConfig2, onselectQuery, [trimmedonorder], (error, results) => {
-        if (error) {
-            return res.status(500).json({ error: 'Database query error' });
+    conn2.connect((err) => {
+        if (err) {
+            console.error('데이터베이스 연결 오류:', err);
+            return res.status(500).json({ error: 'Database connection error' });
         }
 
-        if (results.length > 0) {
-            res.json(results);
-        } else {
-            res.json({ message: '등록된 상차오더가 없습니다.' });
-        }
+        conn2.query("SET NAMES 'utf8mb4'", [], (err) => {
+            if (err) {
+                conn2.end();
+                return res.status(500).json({ error: 'Error setting names' });
+            }
+
+            const onselectQuery = `
+                SELECT CONVERT(CAST(S_NO AS BINARY) USING utf8mb4) AS S_NO, W_IDX
+                FROM t_work_seq
+                WHERE RIGHT(CONVERT(CAST(S_NO AS BINARY) USING utf8mb4), 3) = ?
+                ORDER BY S_DONE
+            `;
+
+            conn2.query(onselectQuery, [trimmedonorder], (error, results) => {
+                if (error) {
+                    console.error('쿼리 오류:', error);
+                    conn2.end();
+                    return res.status(500).json({ error: 'Database query error' });
+                }
+
+                conn2.end();
+
+                // 쿼리 결과 그대로 사용
+                if (results.length > 0) {
+                    res.json(results);
+                } else {
+                    res.json({ message: '등록된 상차오더가 없습니다.' });
+                }
+            });
+        });
     });
 });
 
@@ -952,7 +973,7 @@ app.post('/insert-onorder', (req, res) => {
 
     const useronQuery = 'SELECT CAR FROM user WHERE id = ?';
 
-    const conn1 = createConnection(dbConfig1);
+    const conn1 = mysql.createConnection({ ...dbConfig1, charset: 'utf8mb4' });
     conn1.connect((err) => {
         if (err) {
             console.error('데이터베이스 연결 오류:', err);
@@ -973,7 +994,7 @@ app.post('/insert-onorder', (req, res) => {
             const CAR_NO = userResults[0].CAR;
             conn1.end();
 
-            const conn2 = createConnection(dbConfig2);
+            const conn2 = mysql.createConnection({ ...dbConfig2, charset: 'utf8mb4' });
             conn2.connect((err) => {
                 if (err) {
                     console.error('데이터베이스 연결 오류:', err);
@@ -1050,7 +1071,6 @@ app.post('/insert-onorder', (req, res) => {
                                     const O_MEMO = '홈페이지 접수';
                                     const O_DATE_ORDER = moment().tz(timezone).format('YYYY-MM-DD');
                                     const DATE_INS = moment().tz(timezone).format('YYYY-MM-DD HH:mm:ss');
-
 
                                     const insertValues = [DIV_LOC, O_DATE_ORDER, CAR_NO, CON_TYPE, O_IO, W_IDX, O_MEMO, DATE_INS];
 
