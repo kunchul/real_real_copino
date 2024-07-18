@@ -1054,18 +1054,22 @@ app.post('/insert-onorder', (req, res) => {
                             const checkOrderQuery = `
                                 SELECT O_IDX
                                 FROM T_WORK_ORDER
-                                WHERE W_IDX = ? AND O_DONE = 'N' AND O_DEL = 'N'
+                                WHERE CONVERT(CAST(CAR_NO AS BINARY) USING utf8mb4) = CONVERT(CAST(? AS BINARY) USING utf8mb4) 
+                                  AND CONVERT(CAST(O_IO AS BINARY) USING utf8mb4) = CONVERT(CAST('상차' AS BINARY) USING utf8mb4) 
+                                  AND O_DEL = 'N' 
+                                  AND O_DONE = 'N'
                             `;
 
-                            conn2.query(checkOrderQuery, [W_IDX], (checkError, checkResults) => {
+                            conn2.query(checkOrderQuery, [CAR_NO], (checkError, checkResults) => {
                                 if (checkError) {
                                     conn2.end();
                                     return res.status(500).json({ error: 'Check query error' });
                                 }
 
+
                                 if (checkResults.length > 0) {
                                     conn2.end();
-                                    return res.status(200).json({ status: 'exists', message: '이미 접수된 컨테이너 번호입니다.' });
+                                    return res.status(200).json({ status: 'exists', message: '상차 전 중복접수를 할 수 없습니다.' });
                                 } else {
                                     const O_IO = '상차';
                                     const O_MEMO = '홈페이지 접수';
