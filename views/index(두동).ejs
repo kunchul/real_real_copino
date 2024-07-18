@@ -58,7 +58,7 @@
 
     <main class="auth-section">
         <div class="auth-container">
-            <h1 style="text-align: center; color: white; font-size: 24px;">이지스두동 CY에 오신걸 환영합니다</h1>
+            <h1 style="text-align: center; color: white; font-size: 24px;">이지스녹산 CY에 오신걸 환영합니다</h1>
             <div class="button-group">
                 <button class="btn-action btn-load" data-modal="modal-load">상차접수</button>
                 <button class="btn-action btn-unload" data-modal="modal-unload">하차접수</button>
@@ -1283,7 +1283,7 @@ orderSubmitBtn.onclick = function() {
     fetch('/search-onorder', {
         method: 'POST',
         headers: {
-            'Content-Type': 'application/json',
+            'Content-Type': 'application/json; charset=utf-8',
         },
         body: JSON.stringify({ onorder: orderNumber }),
     })
